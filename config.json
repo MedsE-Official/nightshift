@@ -1,0 +1,19 @@
+{
+  "model": "qwen3-coder:latest",
+  "aider_model": "ollama_chat/qwen3-coder:latest",
+  "max_blocks": 8,
+  "max_attempts_per_block": 3,
+  "timeout_minutes_per_aider_run": 45,
+  "commands": {
+    "test": "npm test",
+    "typecheck": "npm run typecheck",
+    "lint": "npm run lint"
+  },
+  "protected_paths": [
+    ".git",
+    "node_modules",
+    "package-lock.json",
+    "nightshift"
+  ],
+  "allow_test_changes": true
+}
