@@ -1,19 +1,16 @@
+
 {
   "model": "qwen3-coder:latest",
   "aider_model": "openai/qwen3-coder:latest",
-  "max_blocks": 6,
-  "max_attempts_per_block": 3,
-  "timeout_minutes_per_aider_run": 45,
+  "max_blocks": 5,
+  "max_attempts_per_block": 2,
+  "timeout_minutes_per_aider_run": 30,
   "commands": {
-    "test": "npm test",
-    "typecheck": "npm run typecheck",
-    "lint": "npm run lint"
+    "test": "python3 -m pytest -q"
   },
   "protected_paths": [
     ".git",
-    "node_modules",
-    "dist",
-    "vendor",
-    "package-lock.json"
+    ".venv",
+    "__pycache__"
   ]
 }

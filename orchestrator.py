@@ -376,61 +376,56 @@ def detect_protected_changes(
 
 
 def git_checkpoint(project_root: Path) -> str:
-    """Create a Git checkpoint and return the commit hash."""
+    """Return the current HEAD commit as a checkpoint."""
+
     result = run_command(
-        ["git", "commit", "--no-verify", "--all", "--message", "Nightshift checkpoint"],
+        ["git", "rev-parse", "HEAD"],
         cwd=project_root,
         timeout_seconds=30,
     )
-    
+
     if not result.passed:
-        raise RuntimeError("Failed to create Git checkpoint")
-        
-    # Extract the commit hash from the output
-    for line in result.stdout.splitlines():
-        if line.startswith("Committed"):
-            # Example: "Committed as: abc123def456"
-            parts = line.split()
-            if len(parts) >= 3:
-                return parts[2]
-    
-    # Fallback to getting the latest commit
+        raise RuntimeError(
+            "Could not determine the current Git commit."
+        )
+
+    checkpoint = result.stdout.strip()
+
+    if not checkpoint:
+        raise RuntimeError(
+            "Git returned an empty checkpoint commit."
+        )
+
+    return checkpoint
+
+
+def git_restore_checkpoint(
+    project_root: Path,
+    checkpoint_commit: str,
+) -> None:
+    """Restore the working tree to a checkpoint commit."""
+
     result = run_command(
-        ["git", "rev-parse", "HEAD"],
-        cwd=project_root,
-        timeout_seconds=30,
-    )
-    
-    if result.passed:
-        return result.stdout.strip()
-    
-    raise RuntimeError("Could not determine checkpoint commit")
-
-
-def git_restore_checkpoint(project_root: Path, checkpoint_commit: str) -> None:
-    """Restore repository to a specific checkpoint."""
-    # Get the current HEAD
-    head_result = run_command(
-        ["git", "rev-parse", "HEAD"],
-        cwd=project_root,
-        timeout_seconds=30,
-    )
-    
-    if not head_result.passed:
-        return
-        
-    current_head = head_result.stdout.strip()
-    
-    # If we're already at the checkpoint, no need to restore
-    if current_head == checkpoint_commit:
-        return
-    
-    # Reset to the checkpoint commit
-    run_command(
         ["git", "reset", "--hard", checkpoint_commit],
         cwd=project_root,
         timeout_seconds=60,
     )
+
+    if not result.passed:
+        raise RuntimeError(
+            f"Could not restore Git checkpoint {checkpoint_commit}."
+        )
+
+    clean_result = run_command(
+        ["git", "clean", "-fd"],
+        cwd=project_root,
+        timeout_seconds=60,
+    )
+
+    if not clean_result.passed:
+        raise RuntimeError(
+            "Could not remove files created after the checkpoint."
+        )
 
 
 def git_get_changes_since_commit(project_root: Path, commit_hash: str) -> list[str]:
