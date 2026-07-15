@@ -1,26 +1,19 @@
-# Feature: Color Track Clips by Name
+# Feature
 
-## Goal
+Add multiplication and subtraction support to the calculator.
 
-Add a command that colors Arrangement clips based on their exact names.
+## Requirements
 
-## Mandatory requirements
-
-- Preserve the existing delete command.
-- Use the clicked clip only to locate its parent Track.
-- Process every Arrangement clip on that track.
-- Group clips by exact name.
-- Clips with the same name receive the same color.
-- Different name groups receive different colors where possible.
-- Group all changes into one Ableton undo transaction.
-- Relative TypeScript imports must include `.js`.
-- Add unit tests.
+- Preserve the existing `add` and `divide` functions.
+- Add `subtract(a, b)`.
+- Add `multiply(a, b)`.
+- Add tests for both functions.
+- Do not weaken or remove existing tests.
+- Do not modify unrelated files.
+- Do not add dependencies.
 - Do not commit or push.
 
 ## Completion criteria
 
-- All automated tests pass.
-- TypeScript compilation passes.
-- Lint passes.
-- No mandatory requirement is missing.
-- No unrelated files are changed.
+- All tests pass.
+- The reviewer confirms every requirement.

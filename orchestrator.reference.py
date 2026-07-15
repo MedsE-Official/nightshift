@@ -21,10 +21,7 @@ STATE_DIR = NIGHTSHIFT_ROOT / "state"
 REPORT_DIR = NIGHTSHIFT_ROOT / "reports"
 STATE_PATH = STATE_DIR / "progress.json"
 
-# Use the settings from config.py instead of hardcoded URLs
-from config import settings
-
-OLLAMA_CHAT_URL = settings.ollama_chat_url
+OLLAMA_CHAT_URL = "http://localhost:11434/api/chat"
 
 
 @dataclass
@@ -41,84 +38,6 @@ class CommandResult:
     def combined_output(self, max_chars: int = 20_000) -> str:
         output = f"{self.stdout}\n{self.stderr}".strip()
         return output[-max_chars:]
-
-
-# Define schemas at the top so they're available to functions that use them
-PLAN_SCHEMA: dict[str, Any] = {
-    "type": "object",
-    "required": ["complete", "reason", "block"],
-    "properties": {
-        "complete": {"type": "boolean"},
-        "reason": {"type": "string"},
-        "block": {
-            "anyOf": [
-                {
-                    "type": "object",
-                    "required": [
-                        "id",
-                        "title",
-                        "objective",
-                        "requirements",
-                        "files",
-                        "verification",
-                    ],
-                    "properties": {
-                        "id": {"type": "string"},
-                        "title": {"type": "string"},
-                        "objective": {"type": "string"},
-                        "requirements": {
-                            "type": "array",
-                            "items": {"type": "string"},
-                        },
-                        "files": {
-                            "type": "array",
-                            "items": {"type": "string"},
-                        },
-                        "verification": {
-                            "type": "array",
-                            "items": {"type": "string"},
-                        },
-                    },
-                },
-                {"type": "null"},
-            ]
-        },
-    },
-}
-
-
-REVIEW_SCHEMA: dict[str, Any] = {
-    "type": "object",
-    "required": [
-        "approved",
-        "summary",
-        "requirements",
-        "required_fixes",
-    ],
-    "properties": {
-        "approved": {"type": "boolean"},
-        "summary": {"type": "string"},
-        "requirements": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "required": ["requirement", "status", "evidence"],
-                "properties": {
-                    "requirement": {"type": "string"},
-                    "status": {
-                        "type": "string",
-                        "enum": ["pass", "fail", "unknown"],
-                    },
-                    "evidence": {"type": "string"},
-                },
-            },
-        },
-        "required_fixes": {
-            "type": "array",
-            "items": {"type": "string"},
-        },
-    },
-}
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -140,7 +59,7 @@ def process_environment() -> dict[str, str]:
     env = os.environ.copy()
 
     # Aider talks to Ollama through Ollama's OpenAI-compatible endpoint.
-    env.setdefault("OPENAI_API_BASE", settings.openai_api_base)
+    env.setdefault("OPENAI_API_BASE", "http://localhost:11434/v1")
     env.setdefault("OPENAI_API_KEY", "ollama")
 
     # Prevent pagers and alternate terminal screens during unattended runs.
@@ -245,32 +164,23 @@ def ollama_structured(
 
     try:
         with urllib.request.urlopen(request, timeout=600) as response:
-            raw_response = response.read().decode("utf-8")
+            response_data = json.loads(response.read().decode("utf-8"))
     except urllib.error.URLError as error:
         raise RuntimeError(
-            "Could not contact Ollama."
-        ) from error
-
-    try:
-        response_data = json.loads(raw_response)
-    except json.JSONDecodeError as error:
-        raise RuntimeError(
-            "Ollama returnerade ogiltig JSON i HTTP-svaret."
+            "Kunde inte ansluta till Ollama på http://localhost:11434. "
+            "Starta Ollama med exempelvis "
+            "`OLLAMA_CONTEXT_LENGTH=32768 ollama serve`."
         ) from error
 
     content = response_data.get("message", {}).get("content", "").strip()
-
-
     if not content:
-        raise RuntimeError(
-            "Ollama returnerade ett tomt svar."
-        )
+        raise RuntimeError(f"Ollama returnerade ett tomt svar: {response_data}")
 
     try:
         return json.loads(content)
     except json.JSONDecodeError as error:
         raise RuntimeError(
-            "Ollama returned invalid structured JSON in message.content."
+            f"Ollama returnerade ogiltig JSON:\n{content}"
         ) from error
 
 
@@ -375,76 +285,81 @@ def detect_protected_changes(
     return sorted(set(violations))
 
 
-def git_checkpoint(project_root: Path) -> str:
-    """Create a Git checkpoint and return the commit hash."""
-    result = run_command(
-        ["git", "commit", "--no-verify", "--all", "--message", "Nightshift checkpoint"],
-        cwd=project_root,
-        timeout_seconds=30,
-    )
-    
-    if not result.passed:
-        raise RuntimeError("Failed to create Git checkpoint")
-        
-    # Extract the commit hash from the output
-    for line in result.stdout.splitlines():
-        if line.startswith("Committed"):
-            # Example: "Committed as: abc123def456"
-            parts = line.split()
-            if len(parts) >= 3:
-                return parts[2]
-    
-    # Fallback to getting the latest commit
-    result = run_command(
-        ["git", "rev-parse", "HEAD"],
-        cwd=project_root,
-        timeout_seconds=30,
-    )
-    
-    if result.passed:
-        return result.stdout.strip()
-    
-    raise RuntimeError("Could not determine checkpoint commit")
+PLAN_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "required": ["complete", "reason", "block"],
+    "properties": {
+        "complete": {"type": "boolean"},
+        "reason": {"type": "string"},
+        "block": {
+            "anyOf": [
+                {
+                    "type": "object",
+                    "required": [
+                        "id",
+                        "title",
+                        "objective",
+                        "requirements",
+                        "files",
+                        "verification",
+                    ],
+                    "properties": {
+                        "id": {"type": "string"},
+                        "title": {"type": "string"},
+                        "objective": {"type": "string"},
+                        "requirements": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                        },
+                        "files": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                        },
+                        "verification": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                        },
+                    },
+                },
+                {"type": "null"},
+            ]
+        },
+    },
+}
 
 
-def git_restore_checkpoint(project_root: Path, checkpoint_commit: str) -> None:
-    """Restore repository to a specific checkpoint."""
-    # Get the current HEAD
-    head_result = run_command(
-        ["git", "rev-parse", "HEAD"],
-        cwd=project_root,
-        timeout_seconds=30,
-    )
-    
-    if not head_result.passed:
-        return
-        
-    current_head = head_result.stdout.strip()
-    
-    # If we're already at the checkpoint, no need to restore
-    if current_head == checkpoint_commit:
-        return
-    
-    # Reset to the checkpoint commit
-    run_command(
-        ["git", "reset", "--hard", checkpoint_commit],
-        cwd=project_root,
-        timeout_seconds=60,
-    )
-
-
-def git_get_changes_since_commit(project_root: Path, commit_hash: str) -> list[str]:
-    """Get all changed files since a specific commit."""
-    result = run_command(
-        ["git", "diff-tree", "--no-commit-id", "--name-only", "-r", commit_hash],
-        cwd=project_root,
-        timeout_seconds=30,
-    )
-    
-    if not result.passed:
-        return []
-        
-    return sorted(set(line.strip() for line in result.stdout.splitlines() if line.strip()))
+REVIEW_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "required": [
+        "approved",
+        "summary",
+        "requirements",
+        "required_fixes",
+    ],
+    "properties": {
+        "approved": {"type": "boolean"},
+        "summary": {"type": "string"},
+        "requirements": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": ["requirement", "status", "evidence"],
+                "properties": {
+                    "requirement": {"type": "string"},
+                    "status": {
+                        "type": "string",
+                        "enum": ["pass", "fail", "unknown"],
+                    },
+                    "evidence": {"type": "string"},
+                },
+            },
+        },
+        "required_fixes": {
+            "type": "array",
+            "items": {"type": "string"},
+        },
+    },
+}
 
 
 def create_next_block(
@@ -705,6 +620,16 @@ def parse_args() -> argparse.Namespace:
         default=".",
         help="Path to the target Git repository. Defaults to current directory.",
     )
+    parser.add_argument(
+        "--allow-dirty",
+        action="store_true",
+        help="Allow Nightshift to start with existing uncommitted changes.",
+    )
+    parser.add_argument(
+        "--reset-state",
+        action="store_true",
+        help="Delete previous progress state before starting.",
+    )
     return parser.parse_args()
 
 
@@ -730,6 +655,9 @@ def main() -> int:
     STATE_DIR.mkdir(parents=True, exist_ok=True)
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
 
+    if args.reset_state and STATE_PATH.exists():
+        STATE_PATH.unlink()
+
     config = load_json(CONFIG_PATH)
     task = TASK_PATH.read_text(encoding="utf-8")
 
@@ -746,10 +674,10 @@ def main() -> int:
         save_json(STATE_PATH, state)
 
     initial_status = git_status(project_root)
-    if initial_status:
+    if initial_status and not args.allow_dirty:
         print(
             "\nERROR: Target repository is not clean.\n"
-            "Commit or stash existing work.\n\n"
+            "Commit or stash existing work, or use --allow-dirty.\n\n"
             f"{initial_status}",
             file=sys.stderr,
         )
@@ -758,13 +686,6 @@ def main() -> int:
     max_blocks = int(config.get("max_blocks", 8))
     max_attempts = int(config.get("max_attempts_per_block", 3))
     model = config["model"]
-
-    # Create a checkpoint before starting
-    try:
-        initial_checkpoint = git_checkpoint(project_root)
-    except RuntimeError as e:
-        print(f"ERROR: Could not create initial checkpoint: {e}", file=sys.stderr)
-        return 1
 
     for block_number in range(1, max_blocks + 1):
         plan = create_next_block(
@@ -797,13 +718,6 @@ def main() -> int:
 
         block_approved = False
 
-        # Create a checkpoint for this block
-        try:
-            block_checkpoint = git_checkpoint(project_root)
-        except RuntimeError as e:
-            print(f"ERROR: Could not create block checkpoint: {e}", file=sys.stderr)
-            return 1
-
         for attempt in range(1, max_attempts + 1):
             before_files = set(changed_files(project_root))
 
@@ -833,18 +747,13 @@ def main() -> int:
                 project_root=project_root,
                 config=config,
             )
-            
-            # Get the diff for just this block
-            block_diff = git_review_bundle(project_root)
-            
-            # Get only changes introduced by this specific block
-            block_local_changes = git_get_changes_since_commit(project_root, block_checkpoint)
+            diff = git_review_bundle(project_root)
 
             review = review_block(
                 model=model,
                 task=task,
                 block=block,
-                diff=block_diff,
+                diff=diff,
                 verification=verification,
                 protected_violations=protected_violations,
             )
@@ -870,7 +779,6 @@ def main() -> int:
                 "verification": verification,
                 "review": review,
                 "approved": approved,
-                "block_local_changes": block_local_changes,
             }
 
             write_report(block_id, attempt, report)
@@ -896,21 +804,8 @@ def main() -> int:
                 f"Attempt {attempt} of {max_attempts}.",
                 flush=True,
             )
-            
-            # Restore to the block checkpoint if this attempt failed
-            try:
-                git_restore_checkpoint(project_root, block_checkpoint)
-            except RuntimeError as e:
-                print(f"WARNING: Could not restore block checkpoint: {e}", file=sys.stderr)
 
-        # If all attempts for this block failed, restore to initial state
         if not block_approved:
-            try:
-                git_restore_checkpoint(project_root, initial_checkpoint)
-            except RuntimeError as e:
-                print(f"ERROR: Could not restore to initial state: {e}", file=sys.stderr)
-                return 2
-                
             state["status"] = "blocked"
             state["failed_blocks"].append(
                 {

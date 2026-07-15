@@ -1,7 +1,7 @@
 {
   "model": "qwen3-coder:latest",
-  "aider_model": "ollama_chat/qwen3-coder:latest",
-  "max_blocks": 8,
+  "aider_model": "openai/qwen3-coder:latest",
+  "max_blocks": 6,
   "max_attempts_per_block": 3,
   "timeout_minutes_per_aider_run": 45,
   "commands": {
@@ -12,8 +12,8 @@
   "protected_paths": [
     ".git",
     "node_modules",
-    "package-lock.json",
-    "nightshift"
-  ],
-  "allow_test_changes": true
+    "dist",
+    "vendor",
+    "package-lock.json"
+  ]
 }
