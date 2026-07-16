@@ -48,3 +48,23 @@ def compare_symbol_sets(
     removed = before - after
     added = after - before
     return (removed, added)
+
+
+def detect_removed_public_symbols(
+    before_source: str,
+    after_source: str,
+) -> set[str]:
+    """
+    Detect removed public Python symbols between two source code versions.
+    
+    Args:
+        before_source: Previous version of Python source code
+        after_source: Current version of Python source code
+        
+    Returns:
+        A set of symbol names that were removed
+    """
+    before_symbols = extract_public_symbols(before_source)
+    after_symbols = extract_public_symbols(after_source)
+    removed, _ = compare_symbol_sets(before_symbols, after_symbols)
+    return removed
