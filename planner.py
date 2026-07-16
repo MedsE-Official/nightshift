@@ -21,12 +21,14 @@ class Planner:
     def __init__(self, tasks: tuple[PlannerTask, ...]):
         self._tasks = tasks
         self._index = 0
+        self._current_task = None
 
     def next_task(self) -> PlannerTask | None:
         if self._index >= len(self._tasks):
             return None
         task = self._tasks[self._index]
         self._index += 1
+        self._current_task = task
         return task
 
     def next_builder_task(self) -> BuilderTask | None:
@@ -37,6 +39,10 @@ class Planner:
             prompt=planner_task.prompt,
             files=planner_task.files
         )
+
+    @property
+    def current_task(self) -> PlannerTask | None:
+        return self._current_task
 
     @property
     def remaining(self) -> int:

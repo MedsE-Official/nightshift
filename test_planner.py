@@ -433,3 +433,47 @@ def test_planner_remaining_property():
     # After three calls should still have 0 remaining
     planner.next_task()
     assert planner.remaining == 0
+
+
+def test_planner_current_task():
+    """Test that Planner.current_task property works correctly."""
+    task1 = PlannerTask("task1", "Task 1", "Prompt 1", (Path("file1.py"),))
+    task2 = PlannerTask("task2", "Task 2", "Prompt 2", (Path("file2.py"),))
+    
+    planner = Planner((task1, task2))
+    
+    # Initially should be None
+    assert planner.current_task is None
+    
+    # After first next_task() call, should return the first task
+    first_task = planner.next_task()
+    assert planner.current_task == first_task
+    assert planner.current_task is task1
+    
+    # After second next_task() call, should return the second task
+    second_task = planner.next_task()
+    assert planner.current_task == second_task
+    assert planner.current_task is task2
+    
+    # After exhaustion, should still return the last task
+    assert planner.next_task() is None
+    assert planner.current_task == second_task
+    assert planner.current_task is task2
+
+
+def test_planner_current_task_with_next_builder_task():
+    """Test that Planner.current_task property works correctly with next_builder_task()."""
+    task1 = PlannerTask("task1", "Task 1", "Prompt 1", (Path("file1.py"),))
+    
+    planner = Planner((task1,))
+    
+    # Initially should be None
+    assert planner.current_task is None
+    
+    # After next_builder_task() call, should return the task that was processed
+    builder_task = planner.next_builder_task()
+    assert planner.current_task == task1
+    
+    # After exhaustion, should still return the last task
+    assert planner.next_builder_task() is None
+    assert planner.current_task == task1
