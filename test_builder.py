@@ -67,6 +67,39 @@ class TestBuilderLibrary(unittest.TestCase):
         self.assertTrue(hasattr(result, 'has_changes'))
         self.assertTrue(result.has_changes)
 
+    def test_builder_result_passed_true_when_success_and_changes(self):
+        """Test that passed returns True when return_code is 0 and has_changes is True."""
+        result = BuilderResult(
+            return_code=0,
+            stdout="test stdout",
+            stderr="test stderr",
+            has_changes=True
+        )
+        
+        self.assertTrue(result.passed)
+
+    def test_builder_result_passed_false_when_success_no_changes(self):
+        """Test that passed returns False when return_code is 0 but has_changes is False."""
+        result = BuilderResult(
+            return_code=0,
+            stdout="test stdout",
+            stderr="test stderr",
+            has_changes=False
+        )
+        
+        self.assertFalse(result.passed)
+
+    def test_builder_result_passed_false_when_failure_even_with_changes(self):
+        """Test that passed returns False when return_code is non-zero even if has_changes is True."""
+        result = BuilderResult(
+            return_code=1,
+            stdout="test stdout",
+            stderr="test stderr",
+            has_changes=True
+        )
+        
+        self.assertFalse(result.passed)
+
     def test_run_builder_normal_execution_with_changes(self):
         """Test that normal execution with changed files returns has_changes=True."""
         task = BuilderTask(prompt="test prompt", files=(Path("file1.py"),))

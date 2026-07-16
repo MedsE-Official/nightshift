@@ -22,7 +22,7 @@ class BuilderResult:
 
     @property
     def passed(self) -> bool:
-        return self.return_code == 0
+        return self.return_code == 0 and self.has_changes
 
 
 def builder_task_has_changes(
