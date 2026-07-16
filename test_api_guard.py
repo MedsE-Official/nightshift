@@ -1,5 +1,5 @@
 import unittest
-from api_guard import extract_public_symbols
+from api_guard import extract_public_symbols, compare_symbol_sets
 
 
 class TestExtractPublicSymbols(unittest.TestCase):
@@ -55,6 +55,33 @@ def func1()
 """
         result = extract_public_symbols(source)
         self.assertEqual(result, set())
+
+
+class TestCompareSymbolSets(unittest.TestCase):
+    
+    def test_removed_symbols(self):
+        """Test that removed symbols are correctly identified."""
+        before = {"func1", "func2", "Class1"}
+        after = {"func1", "Class1"}
+        removed, added = compare_symbol_sets(before, after)
+        self.assertEqual(removed, {"func2"})
+        self.assertEqual(added, set())
+    
+    def test_added_symbols(self):
+        """Test that added symbols are correctly identified."""
+        before = {"func1", "Class1"}
+        after = {"func1", "func2", "Class1"}
+        removed, added = compare_symbol_sets(before, after)
+        self.assertEqual(removed, set())
+        self.assertEqual(added, {"func2"})
+    
+    def test_unchanged_symbol_sets(self):
+        """Test that unchanged symbol sets return empty sets."""
+        before = {"func1", "func2", "Class1"}
+        after = {"func1", "func2", "Class1"}
+        removed, added = compare_symbol_sets(before, after)
+        self.assertEqual(removed, set())
+        self.assertEqual(added, set())
 
 
 if __name__ == '__main__':
