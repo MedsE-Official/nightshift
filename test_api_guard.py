@@ -2,7 +2,7 @@ import unittest
 from pathlib import Path
 import tempfile
 import os
-from api_guard import extract_public_symbols, compare_symbol_sets, detect_removed_public_symbols, detect_removed_public_symbols_from_files
+from api_guard import extract_public_symbols, compare_symbol_sets, detect_removed_public_symbols, detect_removed_public_symbols_from_files, ApiGuardResult, check_public_api
 
 
 class TestExtractPublicSymbols(unittest.TestCase):
@@ -172,6 +172,70 @@ def func2():
             
             result = detect_removed_public_symbols_from_files(before_file, after_file)
             self.assertEqual(result, set())
+
+
+class TestApiGuardResult(unittest.TestCase):
+    
+    def test_api_guard_result_passed_true(self):
+        """Test that ApiGuardResult with passed=True is created correctly."""
+        result = ApiGuardResult(passed=True, removed_symbols=set())
+        self.assertTrue(result.passed)
+        self.assertEqual(result.removed_symbols, set())
+    
+    def test_api_guard_result_passed_false(self):
+        """Test that ApiGuardResult with passed=False is created correctly."""
+        result = ApiGuardResult(passed=False, removed_symbols={"func1"})
+        self.assertFalse(result.passed)
+        self.assertEqual(result.removed_symbols, {"func1"})
+
+
+class TestCheckPublicApi(unittest.TestCase):
+    
+    def test_no_removed_symbols_returns_passed_true(self):
+        """Test that no removed symbols returns passed=True."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            before_file = Path(tmpdir) / "before.py"
+            after_file = Path(tmpdir) / "after.py"
+            
+            content = """
+def func1():
+    pass
+
+def func2():
+    pass
+"""
+            
+            before_file.write_text(content)
+            after_file.write_text(content)
+            
+            result = check_public_api(before_file, after_file)
+            self.assertTrue(result.passed)
+            self.assertEqual(result.removed_symbols, set())
+    
+    def test_removed_symbol_returns_passed_false_and_includes_symbol(self):
+        """Test that removed symbol returns passed=False and includes the symbol."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            before_file = Path(tmpdir) / "before.py"
+            after_file = Path(tmpdir) / "after.py"
+            
+            before_content = """
+def func1():
+    pass
+
+def func2():
+    pass
+"""
+            after_content = """
+def func1():
+    pass
+"""
+            
+            before_file.write_text(before_content)
+            after_file.write_text(after_content)
+            
+            result = check_public_api(before_file, after_file)
+            self.assertFalse(result.passed)
+            self.assertEqual(result.removed_symbols, {"func2"})
 
 
 if __name__ == '__main__':
