@@ -123,9 +123,9 @@ def func2():
             )
             
             # Verify success conditions
-            self.assertNotIn("errors", result)
-            self.assertTrue(result["api_guard_result"].passed)
-            self.assertEqual(result["api_guard_result"].removed_symbols, set())
+            self.assertIsInstance(result, ReviewResult)
+            self.assertTrue(result.passed)
+            self.assertEqual(result.errors, ())
     
     def test_run_review_adds_error_when_failed(self):
         """Test that run_review adds exactly one review error when check fails."""
@@ -160,11 +160,10 @@ def func1():
             )
             
             # Verify failure conditions
-            self.assertIn("errors", result)
-            self.assertEqual(len(result["errors"]), 1)
-            self.assertIn("func2", result["errors"][0])
-            self.assertFalse(result["api_guard_result"].passed)
-            self.assertEqual(result["api_guard_result"].removed_symbols, {"func2"})
+            self.assertIsInstance(result, ReviewResult)
+            self.assertFalse(result.passed)
+            self.assertEqual(len(result.errors), 1)
+            self.assertIn("func2", result.errors[0])
 
 
 if __name__ == '__main__':

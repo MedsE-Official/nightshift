@@ -34,7 +34,7 @@ def run_review(
     config: Dict[str, Any],
     block: Dict[str, Any],
     diff: str,
-) -> Dict[str, Any]:
+) -> ReviewResult:
     """
     Run the review process.
     
@@ -53,17 +53,15 @@ def run_review(
         project_root / "after.py"
     )
     
-    # Initialize review result
-    review_result = {
-        "review": "placeholder",
-        "api_guard_result": api_guard_result,
-    }
+    # Initialize errors
+    errors = ()
     
     # Add API guard errors if check failed
     if not api_guard_result.passed:
-        if "errors" not in review_result:
-            review_result["errors"] = []
         error_msg = f"Public API change detected: removed symbols {sorted(api_guard_result.removed_symbols)}"
-        review_result["errors"].append(error_msg)
+        errors = (error_msg,)
     
-    return review_result
+    return ReviewResult(
+        passed=api_guard_result.passed,
+        errors=errors
+    )
