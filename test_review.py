@@ -1,6 +1,7 @@
 import unittest
 from pathlib import Path
 import tempfile
+from unittest.mock import patch
 from review import _run_api_guard, run_review, ReviewResult
 from api_guard import ApiGuardResult
 from builder import BuilderResult, BuilderStatus
@@ -257,6 +258,131 @@ def func1():
             self.assertFalse(result.passed)
             self.assertEqual(len(result.errors), 1)
             self.assertIn("Builder produced no file changes.", result.errors[0])
+
+    @patch('review._run_api_guard')
+    def test_run_review_api_guard_not_called_on_failed_builder(self, mock_api_guard):
+        """Test that _run_api_guard is not called when builder fails."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project_root = Path(tmpdir)
+            
+            # Call run_review with failed builder result
+            result = run_review(
+                project_root=project_root,
+                config={},
+                block={},
+                diff="",
+                builder_result=BuilderResult(
+                    status=BuilderStatus.FAILED,
+                    return_code=1,
+                    stdout="",
+                    stderr="",
+                    has_changes=False
+                )
+            )
+            
+            # Verify _run_api_guard was not called
+            mock_api_guard.assert_not_called()
+            
+            # Verify failure conditions
+            self.assertIsInstance(result, ReviewResult)
+            self.assertFalse(result.passed)
+            self.assertEqual(len(result.errors), 1)
+            self.assertIn("Builder execution failed.", result.errors[0])
+
+    @patch('review._run_api_guard')
+    def test_run_review_api_guard_not_called_on_timeout_builder(self, mock_api_guard):
+        """Test that _run_api_guard is not called when builder times out."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project_root = Path(tmpdir)
+            
+            # Call run_review with timeout builder result
+            result = run_review(
+                project_root=project_root,
+                config={},
+                block={},
+                diff="",
+                builder_result=BuilderResult(
+                    status=BuilderStatus.TIMEOUT,
+                    return_code=124,
+                    stdout="",
+                    stderr="",
+                    has_changes=False
+                )
+            )
+            
+            # Verify _run_api_guard was not called
+            mock_api_guard.assert_not_called()
+            
+            # Verify failure conditions
+            self.assertIsInstance(result, ReviewResult)
+            self.assertFalse(result.passed)
+            self.assertEqual(len(result.errors), 1)
+            self.assertIn("Builder execution timed out.", result.errors[0])
+
+    @patch('review._run_api_guard')
+    def test_run_review_api_guard_not_called_on_no_changes_builder(self, mock_api_guard):
+        """Test that _run_api_guard is not called when builder produces no changes."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project_root = Path(tmpdir)
+            
+            # Call run_review with no changes builder result
+            result = run_review(
+                project_root=project_root,
+                config={},
+                block={},
+                diff="",
+                builder_result=BuilderResult(
+                    status=BuilderStatus.NO_CHANGES,
+                    return_code=0,
+                    stdout="",
+                    stderr="",
+                    has_changes=False
+                )
+            )
+            
+            # Verify _run_api_guard was not called
+            mock_api_guard.assert_not_called()
+            
+            # Verify failure conditions
+            self.assertIsInstance(result, ReviewResult)
+            self.assertFalse(result.passed)
+            self.assertEqual(len(result.errors), 1)
+            self.assertIn("Builder produced no file changes.", result.errors[0])
+
+    @patch('review._run_api_guard')
+    def test_run_review_api_guard_called_on_success_builder(self, mock_api_guard):
+        """Test that _run_api_guard is called exactly once when builder succeeds."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project_root = Path(tmpdir)
+            
+            # Mock _run_api_guard to return a successful result
+            mock_api_guard.return_value = ApiGuardResult(
+                passed=True,
+                removed_symbols=set(),
+            )
+            
+            # Call run_review with successful builder result
+            result = run_review(
+                project_root=project_root,
+                config={},
+                block={},
+                diff="",
+                builder_result=BuilderResult(
+                    status=BuilderStatus.SUCCESS,
+                    return_code=0,
+                    stdout="",
+                    stderr="",
+                    has_changes=True
+                )
+            )
+            
+            # Verify _run_api_guard was called exactly once
+            mock_api_guard.assert_called_once()
+            
+            # Verify success conditions
+            self.assertIsInstance(result, ReviewResult)
+            self.assertTrue(result.passed)
+            self.assertEqual(result.errors, ())
 
 
 if __name__ == '__main__':
