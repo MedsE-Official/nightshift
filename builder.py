@@ -42,8 +42,7 @@ def build_environment() -> dict[str, str]:
 
 def run_builder(
     *,
-    prompt: str,
-    files: Sequence[Path],
+    task: BuilderTask,
     project_root: Path,
     timeout_seconds: int = 900,
 ) -> BuilderResult:
@@ -56,12 +55,12 @@ def run_builder(
             f"Project root does not exist: {resolved_project_root}"
         )
 
-    if not prompt.strip():
+    if not task.prompt.strip():
         raise ValueError("Builder prompt must not be empty.")
 
     file_arguments: list[str] = []
 
-    for file_path in files:
+    for file_path in task.files:
         absolute_path = (
             file_path
             if file_path.is_absolute()
@@ -81,13 +80,15 @@ def run_builder(
         "aider",
         "--model",
         "openai/qwen3-coder:latest",
+        "--edit-format",
+        "diff",
         "--no-show-model-warnings",
         "--no-pretty",
         "--no-stream",
         "--yes-always",
         "--no-auto-commits",
         "--message",
-        prompt,
+        task.prompt,
         *file_arguments,
     ]
 

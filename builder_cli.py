@@ -1,10 +1,11 @@
 from pathlib import Path
-from builder import run_builder, BuilderResult
+from builder import run_builder, BuilderResult, BuilderTask
 
 def main() -> int:
     project_root = Path.cwd()
 
-    prompt = """
+    task = BuilderTask(
+        prompt="""
 Goal
 
 Add one isolated helper that detects removed public symbols.
@@ -44,14 +45,15 @@ Verification
 python3 -m pytest -q
 python3 -m py_compile api_guard.py
 git --no-pager diff --check
-""".strip()
-
-    result = run_builder(
-        prompt=prompt,
+""".strip(),
         files=[
             Path("api_guard.py"),
             Path("test_api_guard.py"),
         ],
+    )
+
+    result = run_builder(
+        task=task,
         project_root=project_root,
         timeout_seconds=15 * 60,
     )

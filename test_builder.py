@@ -1,3 +1,4 @@
+import inspect
 import unittest
 from pathlib import Path
 from builder import run_builder, BuilderTask
@@ -37,6 +38,20 @@ class TestBuilderLibrary(unittest.TestCase):
         # Try to modify the files (should raise FrozenInstanceError)
         with self.assertRaises(Exception):
             task.files = (Path("file2.py"),)
+
+    def test_run_builder_accepts_builder_task(self):
+        """Test that run_builder accepts a BuilderTask instead of separate arguments."""
+        # Get the function signature
+        sig = inspect.signature(run_builder)
+        
+        # Assert that "task" is present
+        self.assertIn('task', sig.parameters)
+        
+        # Assert that "prompt" is absent
+        self.assertNotIn('prompt', sig.parameters)
+        
+        # Assert that "files" is absent
+        self.assertNotIn('files', sig.parameters)
 
 if __name__ == '__main__':
     unittest.main()
