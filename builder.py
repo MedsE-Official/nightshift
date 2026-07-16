@@ -18,10 +18,58 @@ class BuilderResult:
     return_code: int
     stdout: str
     stderr: str
+    has_changes: bool
 
     @property
     def passed(self) -> bool:
         return self.return_code == 0
+
+
+def builder_task_has_changes(
+    *,
+    task: BuilderTask,
+    project_root: Path,
+) -> bool:
+    """Detect whether any file belonging to a BuilderTask has changed in Git."""
+    
+    resolved_project_root = project_root.expanduser().resolve()
+    
+    # Prepare the list of files for git status
+    file_arguments: list[str] = []
+    
+    for file_path in task.files:
+        absolute_path = (
+            file_path
+            if file_path.is_absolute()
+            else resolved_project_root / file_path
+        ).resolve()
+        
+        try:
+            relative_path = absolute_path.relative_to(resolved_project_root)
+        except ValueError as error:
+            raise ValueError(
+                f"Builder file must be inside project root: {absolute_path}"
+            ) from error
+            
+        file_arguments.append(str(relative_path))
+    
+    # Run git status --porcelain on the task files
+    command = ["git", "status", "--porcelain", "--"] + file_arguments
+    
+    try:
+        completed = subprocess.run(
+            command,
+            cwd=resolved_project_root,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+    except FileNotFoundError:
+        # Git is not available
+        return False
+    
+    # Return True if there's any output (changed or untracked files)
+    return bool(completed.stdout.strip())
 
 
 def build_environment() -> dict[str, str]:
@@ -120,10 +168,18 @@ def run_builder(
             return_code=124,
             stdout=stdout,
             stderr=f"{stderr}\nBuilder timed out.".strip(),
+            has_changes=False,
         )
 
+    # Determine if files have changed
+    has_changes = builder_task_has_changes(
+        task=task,
+        project_root=resolved_project_root,
+    )
+    
     return BuilderResult(
         return_code=completed.returncode,
         stdout=completed.stdout,
         stderr=completed.stderr,
+        has_changes=has_changes,
     )
