@@ -1,9 +1,20 @@
 import os
+from enum import Enum
 from pathlib import Path
 from typing import Dict, Any
 from dataclasses import dataclass
 from api_guard import check_public_api, ApiGuardResult
 from builder import BuilderResult, BuilderStatus
+
+
+class ReviewStatus(Enum):
+    PASSED = "passed"
+    BUILDER_FAILED = "builder_failed"
+    BUILDER_TIMEOUT = "builder_timeout"
+    NO_CHANGES = "no_changes"
+    TESTS_FAILED = "tests_failed"
+    API_GUARD_FAILED = "api_guard_failed"
+    UNEXPECTED_STATUS = "unexpected_status"
 
 
 def _run_api_guard(
@@ -27,6 +38,7 @@ def _run_api_guard(
 class ReviewResult:
     passed: bool
     errors: tuple[str, ...]
+    status: "ReviewStatus"
 
 
 @dataclass(frozen=True)
@@ -66,17 +78,20 @@ def run_review(
     if builder_result.status == BuilderStatus.FAILED:
         return ReviewResult(
             passed=False,
-            errors=("Builder execution failed.",)
+            errors=("Builder execution failed.",),
+            status=ReviewStatus.BUILDER_FAILED
         )
     elif builder_result.status == BuilderStatus.TIMEOUT:
         return ReviewResult(
             passed=False,
-            errors=("Builder execution timed out.",)
+            errors=("Builder execution timed out.",),
+            status=ReviewStatus.BUILDER_TIMEOUT
         )
     elif builder_result.status == BuilderStatus.NO_CHANGES:
         return ReviewResult(
             passed=False,
-            errors=("Builder produced no file changes.",)
+            errors=("Builder produced no file changes.",),
+            status=ReviewStatus.NO_CHANGES
         )
     
     # Only run API guard check if builder succeeded
@@ -85,7 +100,8 @@ def run_review(
         if not test_result.passed:
             return ReviewResult(
                 passed=False,
-                errors=("Test execution failed.",)
+                errors=("Test execution failed.",),
+                status=ReviewStatus.TESTS_FAILED
             )
         
         api_guard_result = _run_api_guard(
@@ -103,11 +119,13 @@ def run_review(
         
         return ReviewResult(
             passed=api_guard_result.passed,
-            errors=errors
+            errors=errors,
+            status=ReviewStatus.PASSED if api_guard_result.passed else ReviewStatus.API_GUARD_FAILED
         )
     
     # Default case - should not happen with valid BuilderStatus values
     return ReviewResult(
         passed=False,
-        errors=("Unexpected builder status.",)
+        errors=("Unexpected builder status.",),
+        status=ReviewStatus.UNEXPECTED_STATUS
     )

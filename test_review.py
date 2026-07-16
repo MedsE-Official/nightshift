@@ -2,7 +2,7 @@ import unittest
 from pathlib import Path
 import tempfile
 from unittest.mock import patch
-from review import _run_api_guard, run_review, ReviewResult, ExecutionResult
+from review import _run_api_guard, run_review, ReviewResult, ExecutionResult, ReviewStatus
 from api_guard import ApiGuardResult
 from builder import BuilderResult, BuilderStatus
 
@@ -11,21 +11,21 @@ class TestReviewResult(unittest.TestCase):
     
     def test_review_result_stores_passed(self):
         """Test that ReviewResult stores passed value."""
-        result = ReviewResult(passed=True, errors=())
+        result = ReviewResult(passed=True, errors=(), status=ReviewStatus.PASSED)
         self.assertTrue(result.passed)
         
-        result = ReviewResult(passed=False, errors=())
+        result = ReviewResult(passed=False, errors=(), status=ReviewStatus.PASSED)
         self.assertFalse(result.passed)
     
     def test_review_result_stores_errors(self):
         """Test that ReviewResult stores errors."""
         errors = ("error1", "error2")
-        result = ReviewResult(passed=True, errors=errors)
+        result = ReviewResult(passed=True, errors=errors, status=ReviewStatus.PASSED)
         self.assertEqual(result.errors, errors)
     
     def test_review_result_is_immutable(self):
         """Test that ReviewResult is immutable."""
-        result = ReviewResult(passed=True, errors=("error1",))
+        result = ReviewResult(passed=True, errors=("error1",), status=ReviewStatus.PASSED)
         
         # Try to modify the fields (should raise an exception)
         with self.assertRaises(AttributeError):
@@ -33,6 +33,9 @@ class TestReviewResult(unittest.TestCase):
         
         with self.assertRaises(AttributeError):
             result.errors = ("new_error",)
+        
+        with self.assertRaises(AttributeError):
+            result.status = ReviewStatus.BUILDER_FAILED
 
 
 class TestExecutionResult(unittest.TestCase):
@@ -185,6 +188,7 @@ def func2():
             self.assertIsInstance(result, ReviewResult)
             self.assertTrue(result.passed)
             self.assertEqual(result.errors, ())
+            self.assertEqual(result.status, ReviewStatus.PASSED)
     
     def test_run_review_adds_error_when_failed(self):
         """Test that run_review adds exactly one review error when check fails."""
@@ -235,6 +239,7 @@ def func1():
             self.assertFalse(result.passed)
             self.assertEqual(len(result.errors), 1)
             self.assertIn("func2", result.errors[0])
+            self.assertEqual(result.status, ReviewStatus.API_GUARD_FAILED)
     
     def test_run_review_builder_failed(self):
         """Test that run_review returns failed result when builder fails."""
@@ -266,6 +271,7 @@ def func1():
             self.assertFalse(result.passed)
             self.assertEqual(len(result.errors), 1)
             self.assertIn("Builder execution failed.", result.errors[0])
+            self.assertEqual(result.status, ReviewStatus.BUILDER_FAILED)
     
     def test_run_review_builder_timeout(self):
         """Test that run_review returns failed result when builder times out."""
@@ -297,6 +303,7 @@ def func1():
             self.assertFalse(result.passed)
             self.assertEqual(len(result.errors), 1)
             self.assertIn("Builder execution timed out.", result.errors[0])
+            self.assertEqual(result.status, ReviewStatus.BUILDER_TIMEOUT)
     
     def test_run_review_builder_no_changes(self):
         """Test that run_review returns failed result when builder produces no changes."""
@@ -328,6 +335,7 @@ def func1():
             self.assertFalse(result.passed)
             self.assertEqual(len(result.errors), 1)
             self.assertIn("Builder produced no file changes.", result.errors[0])
+            self.assertEqual(result.status, ReviewStatus.NO_CHANGES)
 
     @patch('review._run_api_guard')
     def test_run_review_api_guard_not_called_on_failed_builder(self, mock_api_guard):
@@ -504,6 +512,7 @@ def func1():
             self.assertFalse(result.passed)
             self.assertEqual(len(result.errors), 1)
             self.assertEqual(result.errors[0], "Test execution failed.")
+            self.assertEqual(result.status, ReviewStatus.TESTS_FAILED)
 
     @patch('review._run_api_guard')
     def test_run_review_api_guard_not_called_on_failed_test(self, mock_api_guard):
