@@ -9,4 +9,5 @@ aider \
   --no-pretty \
   --no-stream \
   --yes-always \
-  --no-auto-commits
+  --no-auto-commits \
+  "$@"
