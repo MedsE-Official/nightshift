@@ -1,0 +1,67 @@
+==============================
+Running verification...
+==============================
+............FF...                                                        [100%]
+=================================== FAILURES ===================================
+__________________ TestPreflight.test_ollama_model_available ___________________
+
+self = <test_preflight.TestPreflight testMethod=test_ollama_model_available>
+mock_urlopen = <MagicMock name='urlopen' id='4445950336'>
+
+    @patch('preflight.urllib.request.urlopen')
+    def test_ollama_model_available(self, mock_urlopen):
+        # Create a temporary directory and config file
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project_root = Path(temp_dir)
+            config_path = project_root / "config.json"
+    
+            # Write the config file
+            config_content = '{"model": "qwen3-coder:latest"}'
+            with open(config_path, 'w') as f:
+                f.write(config_content)
+    
+            # Mock the urllib response properly
+            mock_response = MagicMock()
+            mock_response.read.return_value = b'{"models": [{"name": "qwen3-coder:latest"}]}'
+            mock_urlopen.return_value.__enter__.return_value = mock_response
+    
+            result = preflight._validate_ollama_model(project_root)
+    
+>           self.assertTrue(result.passed)
+E           AssertionError: False is not true
+
+test_preflight.py:32: AssertionError
+________________ TestPreflight.test_ollama_model_not_available _________________
+
+self = <test_preflight.TestPreflight testMethod=test_ollama_model_not_available>
+mock_urlopen = <MagicMock name='urlopen' id='4445849248'>
+
+    @patch('preflight.urllib.request.urlopen')
+    def test_ollama_model_not_available(self, mock_urlopen):
+        # Create a temporary directory and config file
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project_root = Path(temp_dir)
+            config_path = project_root / "config.json"
+    
+            # Write the config file
+            config_content = '{"model": "qwen3-coder:latest"}'
+            with open(config_path, 'w') as f:
+                f.write(config_content)
+    
+            # Mock the urllib response with different model
+            mock_response = MagicMock()
+            mock_response.read.return_value = b'{"models": [{"name": "other-model:latest"}]}'
+            mock_urlopen.return_value.__enter__.return_value = mock_response
+    
+            result = preflight._validate_ollama_model(project_root)
+    
+            self.assertFalse(result.passed)
+            self.assertEqual(len(result.errors), 1)
+>           self.assertIn("not available", result.errors[0])
+E           AssertionError: 'not available' not found in 'Ollama model validation failed: the JSON object must be str, bytes or bytearray, not MagicMock'
+
+test_preflight.py:57: AssertionError
+=========================== short test summary info ============================
+FAILED test_preflight.py::TestPreflight::test_ollama_model_available - Assert...
+FAILED test_preflight.py::TestPreflight::test_ollama_model_not_available - As...
+2 failed, 15 passed in 0.67s
