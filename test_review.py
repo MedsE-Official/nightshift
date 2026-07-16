@@ -2,7 +2,7 @@ import unittest
 from pathlib import Path
 import tempfile
 from unittest.mock import patch
-from review import _run_api_guard, run_review, ReviewResult
+from review import _run_api_guard, run_review, ReviewResult, ExecutionResult
 from api_guard import ApiGuardResult
 from builder import BuilderResult, BuilderStatus
 
@@ -33,6 +33,51 @@ class TestReviewResult(unittest.TestCase):
         
         with self.assertRaises(AttributeError):
             result.errors = ("new_error",)
+
+
+class TestExecutionResult(unittest.TestCase):
+    
+    def test_test_result_stores_return_code(self):
+        """Test that ExecutionResult stores return_code."""
+        result = ExecutionResult(return_code=0, stdout="", stderr="")
+        self.assertEqual(result.return_code, 0)
+        
+        result = ExecutionResult(return_code=1, stdout="", stderr="")
+        self.assertEqual(result.return_code, 1)
+    
+    def test_test_result_stores_stdout(self):
+        """Test that ExecutionResult stores stdout."""
+        result = ExecutionResult(return_code=0, stdout="output", stderr="")
+        self.assertEqual(result.stdout, "output")
+    
+    def test_test_result_stores_stderr(self):
+        """Test that ExecutionResult stores stderr."""
+        result = ExecutionResult(return_code=0, stdout="", stderr="error")
+        self.assertEqual(result.stderr, "error")
+    
+    def test_test_result_passed_is_true_when_return_code_zero(self):
+        """Test that ExecutionResult.passed is True when return_code is 0."""
+        result = ExecutionResult(return_code=0, stdout="", stderr="")
+        self.assertTrue(result.passed)
+    
+    def test_test_result_passed_is_false_when_return_code_nonzero(self):
+        """Test that ExecutionResult.passed is False when return_code is non-zero."""
+        result = ExecutionResult(return_code=1, stdout="", stderr="")
+        self.assertFalse(result.passed)
+    
+    def test_test_result_is_immutable(self):
+        """Test that ExecutionResult is immutable."""
+        result = ExecutionResult(return_code=0, stdout="output", stderr="error")
+        
+        # Try to modify the fields (should raise an exception)
+        with self.assertRaises(AttributeError):
+            result.return_code = 1
+        
+        with self.assertRaises(AttributeError):
+            result.stdout = "new_output"
+        
+        with self.assertRaises(AttributeError):
+            result.stderr = "new_error"
 
 
 class TestRunApiGuard(unittest.TestCase):

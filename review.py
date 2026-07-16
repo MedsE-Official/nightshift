@@ -29,6 +29,17 @@ class ReviewResult:
     errors: tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class ExecutionResult:
+    return_code: int
+    stdout: str
+    stderr: str
+
+    @property
+    def passed(self) -> bool:
+        return self.return_code == 0
+
+
 def run_review(
     *,
     project_root: Path,
