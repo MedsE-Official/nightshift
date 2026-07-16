@@ -41,6 +41,37 @@
       "id": "environment_isolation",
       "priority": "high",
       "instruction": "Test execution must not be contaminated by temporary shell variables such as OPENAI_API_BASE."
+    },
+    {
+      "id": "collection_success_required",
+      "priority": "critical",
+      "instruction": "A test run that fails during collection is a failed review even when no test body has executed."
+    },
+    {
+      "id": "warnings_are_review_signals",
+      "priority": "medium",
+      "instruction": "Treat new test warnings as review findings. Resolve avoidable warnings before accepting the task."
+    },
+    {
+      "id": "verify_new_symbol_exists",
+      "priority": "critical",
+      "instruction": "For every newly imported or referenced symbol, verify that its definition exists in the resulting code."
+    },
+
+    {
+      "id": "check_all_call_sites_after_signature_change",
+      "priority": "critical",
+      "instruction": "When a callable signature changes, inspect all repository call sites for missing or obsolete arguments."
+    },
+    {
+      "id": "review_semantic_consistency",
+      "priority": "high",
+      "instruction": "Check that status, passed flags, return codes, and change flags form logically consistent combinations."
+    },
+    {
+      "id": "verify_expected_exception_types",
+      "priority": "medium",
+      "instruction": "When reviewing tests, verify that expected exception types match the actual behavior of the production implementation."
     }
   ]
 }

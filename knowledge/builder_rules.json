@@ -41,6 +41,11 @@
       "id": "no_commit",
       "priority": "high",
       "instruction": "Never commit or push. The orchestrator owns version-control decisions."
+    },
+    {
+      "id": "verify_symbol_definition",
+      "priority": "critical",
+      "instruction": "When introducing a new type or enum, verify that the symbol is actually declared before using or importing it."
     }
   ]
 }
