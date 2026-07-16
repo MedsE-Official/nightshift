@@ -1,0 +1,5 @@
+{"id": "INC-001", "task": "1.1.4", "observation": "A large task rewrote preflight architecture and removed helper functions.", "learning": "Split imports, tests, and production behavior into separate tasks.", "severity": "high"}
+{"id": "INC-002", "task": "2.1.3", "observation": "Aider whole edit format printed correct diffs but did not modify files.", "learning": "Use diff edit format with qwen3-coder and verify Git changes.", "severity": "critical"}
+{"id": "INC-003", "task": "2.2.3", "observation": "Tests instantiated BuilderResult with a nonexistent output field.", "learning": "Test fixtures must be derived from the current production dataclass contract.", "severity": "medium"}
+{"id": "INC-004", "task": "2.2.5", "observation": "Existing tests were not updated after run_review gained a required test_result argument.", "learning": "When a function signature changes, update every caller and test fixture.", "severity": "medium"}
+{"id": "INC-005", "task": "2.2.6", "observation": "ReviewStatus was referenced but never declared.", "learning": "Verify that every newly referenced symbol is actually defined before accepting the task.", "severity": "medium"}

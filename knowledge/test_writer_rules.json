@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "role": "test_writer",
+  "rules": [
+    {
+      "id": "test_real_behavior",
+      "priority": "critical",
+      "instruction": "Tests must call the production function being tested."
+    },
+    {
+      "id": "no_placeholder_assertions",
+      "priority": "critical",
+      "instruction": "Never use self.assertTrue(True), skippable conditional assertions, or tests that only verify callable()."
+    },
+    {
+      "id": "valid_fixtures",
+      "priority": "critical",
+      "instruction": "Construct dataclasses using their actual fields and valid combinations."
+    },
+    {
+      "id": "test_control_flow",
+      "priority": "high",
+      "instruction": "When behavior depends on status, mock downstream calls and verify whether they were or were not called."
+    },
+    {
+      "id": "preserve_test_count",
+      "priority": "high",
+      "instruction": "Do not remove or overwrite existing tests unless explicitly required."
+    },
+    {
+      "id": "focused_tests",
+      "priority": "high",
+      "instruction": "Add one focused test per requested behavior and avoid unrelated test refactoring."
+    }
+  ]
+}

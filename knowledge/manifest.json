@@ -1,0 +1,11 @@
+{
+  "name": "Nightshift Lessons Learned",
+  "version": 1,
+  "files": [
+    "builder_rules.json",
+    "test_writer_rules.json",
+    "reviewer_rules.json",
+    "planner_rules.json",
+    "incident_learnings.jsonl"
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "role": "builder",
+  "rules": [
+    {
+      "id": "one_micro_task_per_session",
+      "priority": "critical",
+      "instruction": "Start a fresh Aider process for every micro-task. Never reuse Builder chat history."
+    },
+    {
+      "id": "prefer_single_file_tasks",
+      "priority": "high",
+      "instruction": "Prefer one writable file per Builder task. Split library, CLI, and test changes into separate tasks when practical."
+    },
+    {
+      "id": "exact_file_prompt_alignment",
+      "priority": "critical",
+      "instruction": "The prompt must explicitly name the same file that is provided to Aider."
+    },
+    {
+      "id": "diff_edit_format",
+      "priority": "critical",
+      "instruction": "Use Aider edit format diff with qwen3-coder. Whole edit format may produce proposed patches without applying them."
+    },
+    {
+      "id": "no_unrelated_changes",
+      "priority": "critical",
+      "instruction": "Modify only the files and behavior explicitly requested. Do not refactor unrelated code."
+    },
+    {
+      "id": "preserve_existing_symbols",
+      "priority": "critical",
+      "instruction": "Existing module-level functions and classes must remain unless removal is explicitly required."
+    },
+    {
+      "id": "task_requires_real_diff",
+      "priority": "critical",
+      "instruction": "Exit code zero is not completion. A coding task succeeds only when at least one allowed task file has a real Git change."
+    },
+    {
+      "id": "no_commit",
+      "priority": "high",
+      "instruction": "Never commit or push. The orchestrator owns version-control decisions."
+    }
+  ]
+}

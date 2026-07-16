@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "role": "planner",
+  "rules": [
+    {
+      "id": "split_by_responsibility",
+      "priority": "critical",
+      "instruction": "Separate production implementation, CLI adaptation, and test adaptation into distinct micro-tasks when possible."
+    },
+    {
+      "id": "one_behavior_per_task",
+      "priority": "critical",
+      "instruction": "A task should introduce or change one behavior only."
+    },
+    {
+      "id": "separate_integration_and_policy",
+      "priority": "high",
+      "instruction": "Build a helper first, integrate it second, expose the result third, and change policy last."
+    },
+    {
+      "id": "minimum_context",
+      "priority": "high",
+      "instruction": "Provide only the files needed to complete the current task."
+    },
+    {
+      "id": "explicit_read_write_sets",
+      "priority": "high",
+      "instruction": "Every task must define files available to read and files allowed to modify."
+    },
+    {
+      "id": "commit_after_green_review",
+      "priority": "critical",
+      "instruction": "Commit only after tests, diff checks, guard rails, and review all pass."
+    }
+  ]
+}

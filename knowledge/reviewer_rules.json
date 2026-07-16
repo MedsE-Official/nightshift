@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "role": "reviewer",
+  "rules": [
+    {
+      "id": "green_tests_not_enough",
+      "priority": "critical",
+      "instruction": "A green test suite does not prove that the requested task was implemented."
+    },
+    {
+      "id": "verify_expected_change",
+      "priority": "critical",
+      "instruction": "Compare task requirements with the actual Git diff and changed files."
+    },
+    {
+      "id": "reject_no_changes",
+      "priority": "critical",
+      "instruction": "Reject coding tasks that produce no allowed-file changes."
+    },
+    {
+      "id": "reject_wrong_files",
+      "priority": "critical",
+      "instruction": "Reject changes outside the allowed writable file set."
+    },
+    {
+      "id": "detect_fake_tests",
+      "priority": "critical",
+      "instruction": "Reject tests that do not invoke production behavior or use placeholders."
+    },
+    {
+      "id": "public_api_guard",
+      "priority": "critical",
+      "instruction": "Reject unexpected removal of existing module-level functions or classes."
+    },
+    {
+      "id": "review_in_order",
+      "priority": "high",
+      "instruction": "Evaluate Builder status first. Run downstream checks only after Builder success."
+    },
+    {
+      "id": "environment_isolation",
+      "priority": "high",
+      "instruction": "Test execution must not be contaminated by temporary shell variables such as OPENAI_API_BASE."
+    }
+  ]
+}
