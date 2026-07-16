@@ -3,6 +3,7 @@ from pathlib import Path
 import tempfile
 from review import _run_api_guard, run_review, ReviewResult
 from api_guard import ApiGuardResult
+from builder import BuilderResult, BuilderStatus
 
 
 class TestReviewResult(unittest.TestCase):
@@ -119,7 +120,14 @@ def func2():
                 project_root=project_root,
                 config={},
                 block={},
-                diff=""
+                diff="",
+                builder_result=BuilderResult(
+                    status=BuilderStatus.SUCCESS,
+                    return_code=0,
+                    stdout="",
+                    stderr="",
+                    has_changes=True
+                )
             )
             
             # Verify success conditions
@@ -156,7 +164,14 @@ def func1():
                 project_root=project_root,
                 config={},
                 block={},
-                diff=""
+                diff="",
+                builder_result=BuilderResult(
+                    status=BuilderStatus.SUCCESS,
+                    return_code=0,
+                    stdout="",
+                    stderr="",
+                    has_changes=True
+                )
             )
             
             # Verify failure conditions
@@ -164,6 +179,84 @@ def func1():
             self.assertFalse(result.passed)
             self.assertEqual(len(result.errors), 1)
             self.assertIn("func2", result.errors[0])
+    
+    def test_run_review_builder_failed(self):
+        """Test that run_review returns failed result when builder fails."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project_root = Path(tmpdir)
+            
+            # Call run_review with failed builder result
+            result = run_review(
+                project_root=project_root,
+                config={},
+                block={},
+                diff="",
+                builder_result=BuilderResult(
+                    status=BuilderStatus.FAILED,
+                    return_code=1,
+                    stdout="",
+                    stderr="",
+                    has_changes=False
+                )
+            )
+            
+            # Verify failure conditions
+            self.assertIsInstance(result, ReviewResult)
+            self.assertFalse(result.passed)
+            self.assertEqual(len(result.errors), 1)
+            self.assertIn("Builder execution failed.", result.errors[0])
+    
+    def test_run_review_builder_timeout(self):
+        """Test that run_review returns failed result when builder times out."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project_root = Path(tmpdir)
+            
+            # Call run_review with timeout builder result
+            result = run_review(
+                project_root=project_root,
+                config={},
+                block={},
+                diff="",
+                builder_result=BuilderResult(
+                    status=BuilderStatus.TIMEOUT,
+                    return_code=124,
+                    stdout="",
+                    stderr="",
+                    has_changes=False
+                )
+            )
+            
+            # Verify failure conditions
+            self.assertIsInstance(result, ReviewResult)
+            self.assertFalse(result.passed)
+            self.assertEqual(len(result.errors), 1)
+            self.assertIn("Builder execution timed out.", result.errors[0])
+    
+    def test_run_review_builder_no_changes(self):
+        """Test that run_review returns failed result when builder produces no changes."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project_root = Path(tmpdir)
+            
+            # Call run_review with no changes builder result
+            result = run_review(
+                project_root=project_root,
+                config={},
+                block={},
+                diff="",
+                builder_result=BuilderResult(
+                    status=BuilderStatus.NO_CHANGES,
+                    return_code=0,
+                    stdout="",
+                    stderr="",
+                    has_changes=False
+                )
+            )
+            
+            # Verify failure conditions
+            self.assertIsInstance(result, ReviewResult)
+            self.assertFalse(result.passed)
+            self.assertEqual(len(result.errors), 1)
+            self.assertIn("Builder produced no file changes.", result.errors[0])
 
 
 if __name__ == '__main__':

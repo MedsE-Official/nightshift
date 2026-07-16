@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Dict, Any
 from dataclasses import dataclass
 from api_guard import check_public_api, ApiGuardResult
+from builder import BuilderResult, BuilderStatus
 
 
 def _run_api_guard(
@@ -34,6 +35,7 @@ def run_review(
     config: Dict[str, Any],
     block: Dict[str, Any],
     diff: str,
+    builder_result: BuilderResult,
 ) -> ReviewResult:
     """
     Run the review process.
@@ -43,25 +45,50 @@ def run_review(
         config: Configuration dictionary
         block: Block information
         diff: Git diff
+        builder_result: Result from the builder execution
         
     Returns:
         Review results
     """
-    # Run API guard check
-    api_guard_result = _run_api_guard(
-        project_root / "before.py",
-        project_root / "after.py"
-    )
+    # Handle different builder statuses before running API Guard
+    if builder_result.status == BuilderStatus.FAILED:
+        return ReviewResult(
+            passed=False,
+            errors=("Builder execution failed.",)
+        )
+    elif builder_result.status == BuilderStatus.TIMEOUT:
+        return ReviewResult(
+            passed=False,
+            errors=("Builder execution timed out.",)
+        )
+    elif builder_result.status == BuilderStatus.NO_CHANGES:
+        return ReviewResult(
+            passed=False,
+            errors=("Builder produced no file changes.",)
+        )
     
-    # Initialize errors
-    errors = ()
+    # Only run API guard check if builder succeeded
+    if builder_result.status == BuilderStatus.SUCCESS:
+        api_guard_result = _run_api_guard(
+            project_root / "before.py",
+            project_root / "after.py"
+        )
+        
+        # Initialize errors
+        errors = ()
+        
+        # Add API guard errors if check failed
+        if not api_guard_result.passed:
+            error_msg = f"Public API change detected: removed symbols {sorted(api_guard_result.removed_symbols)}"
+            errors = (error_msg,)
+        
+        return ReviewResult(
+            passed=api_guard_result.passed,
+            errors=errors
+        )
     
-    # Add API guard errors if check failed
-    if not api_guard_result.passed:
-        error_msg = f"Public API change detected: removed symbols {sorted(api_guard_result.removed_symbols)}"
-        errors = (error_msg,)
-    
+    # Default case - should not happen with valid BuilderStatus values
     return ReviewResult(
-        passed=api_guard_result.passed,
-        errors=errors
+        passed=False,
+        errors=("Unexpected builder status.",)
     )
