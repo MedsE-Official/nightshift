@@ -2,6 +2,8 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+from builder import BuilderTask
+
 
 @dataclass(frozen=True)
 class PlannerTask:
@@ -26,6 +28,15 @@ class Planner:
         task = self._tasks[self._index]
         self._index += 1
         return task
+
+    def next_builder_task(self) -> BuilderTask | None:
+        planner_task = self.next_task()
+        if planner_task is None:
+            return None
+        return BuilderTask(
+            prompt=planner_task.prompt,
+            files=planner_task.files
+        )
 
     @property
     def remaining(self) -> int:

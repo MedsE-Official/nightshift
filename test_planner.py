@@ -4,6 +4,7 @@ import pytest
 from dataclasses import FrozenInstanceError
 from pathlib import Path
 from planner import Planner, PlannerTask, load_backlog
+from builder import BuilderTask
 
 
 def test_planner_task_attributes():
@@ -374,6 +375,41 @@ def test_planner_empty_tasks():
     assert planner.remaining == 0
     assert planner.next_task() is None
     assert planner.remaining == 0
+
+
+def test_planner_next_builder_task():
+    """Test that Planner.next_builder_task() converts PlannerTask to BuilderTask."""
+    # Create a PlannerTask
+    planner_task = PlannerTask(
+        id="task-1",
+        title="Test Task",
+        prompt="This is a test prompt",
+        files=(Path("file1.py"), Path("file2.py"))
+    )
+    
+    # Create a Planner with that task
+    planner = Planner((planner_task,))
+    
+    # Get the BuilderTask
+    builder_task = planner.next_builder_task()
+    
+    # Verify it's a BuilderTask
+    assert isinstance(builder_task, BuilderTask)
+    
+    # Verify prompt is preserved
+    assert builder_task.prompt == "This is a test prompt"
+    
+    # Verify files are preserved
+    assert builder_task.files == (Path("file1.py"), Path("file2.py"))
+    
+    # Verify that calling it again returns None (exhausted)
+    assert planner.next_builder_task() is None
+
+
+def test_planner_next_builder_task_empty():
+    """Test that Planner.next_builder_task() returns None when no tasks remain."""
+    planner = Planner(())
+    assert planner.next_builder_task() is None
 
 
 def test_planner_remaining_property():
