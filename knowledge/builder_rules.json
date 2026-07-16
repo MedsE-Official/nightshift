@@ -46,6 +46,16 @@
       "id": "verify_symbol_definition",
       "priority": "critical",
       "instruction": "When introducing a new type or enum, verify that the symbol is actually declared before using or importing it."
+    },
+    {
+      "id": "signature_change_updates_all_callers",
+      "priority": "critical",
+      "instruction": "When changing a function signature, update every production caller and every test caller in the allowed scope."
+    },
+    {
+      "id": "do_not_exceed_task_scope",
+      "priority": "high",
+      "instruction": "Do not implement the next planned integration step unless it is explicitly included in the current task."
     }
   ]
 }
