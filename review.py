@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from typing import Dict, Any
+from dataclasses import dataclass
 from api_guard import check_public_api, ApiGuardResult
 
 
@@ -19,6 +20,12 @@ def _run_api_guard(
         An ApiGuardResult indicating whether the check passed and any removed symbols
     """
     return check_public_api(before_file, after_file)
+
+
+@dataclass(frozen=True)
+class ReviewResult:
+    passed: bool
+    errors: tuple[str, ...]
 
 
 def run_review(

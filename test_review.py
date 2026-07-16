@@ -1,8 +1,36 @@
 import unittest
 from pathlib import Path
 import tempfile
-from review import _run_api_guard, run_review
+from review import _run_api_guard, run_review, ReviewResult
 from api_guard import ApiGuardResult
+
+
+class TestReviewResult(unittest.TestCase):
+    
+    def test_review_result_stores_passed(self):
+        """Test that ReviewResult stores passed value."""
+        result = ReviewResult(passed=True, errors=())
+        self.assertTrue(result.passed)
+        
+        result = ReviewResult(passed=False, errors=())
+        self.assertFalse(result.passed)
+    
+    def test_review_result_stores_errors(self):
+        """Test that ReviewResult stores errors."""
+        errors = ("error1", "error2")
+        result = ReviewResult(passed=True, errors=errors)
+        self.assertEqual(result.errors, errors)
+    
+    def test_review_result_is_immutable(self):
+        """Test that ReviewResult is immutable."""
+        result = ReviewResult(passed=True, errors=("error1",))
+        
+        # Try to modify the fields (should raise an exception)
+        with self.assertRaises(AttributeError):
+            result.passed = False
+        
+        with self.assertRaises(AttributeError):
+            result.errors = ("new_error",)
 
 
 class TestRunApiGuard(unittest.TestCase):
