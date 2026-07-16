@@ -40,8 +40,23 @@ def run_review(
     Returns:
         Review results
     """
-    # Existing review logic would go here
-    return {
+    # Run API guard check
+    api_guard_result = _run_api_guard(
+        project_root / "before.py",
+        project_root / "after.py"
+    )
+    
+    # Initialize review result
+    review_result = {
         "review": "placeholder",
-        "api_guard_result": None,  # Will be populated when we actually call _run_api_guard
+        "api_guard_result": api_guard_result,
     }
+    
+    # Add API guard errors if check failed
+    if not api_guard_result.passed:
+        if "errors" not in review_result:
+            review_result["errors"] = []
+        error_msg = f"Public API change detected: removed symbols {sorted(api_guard_result.removed_symbols)}"
+        review_result["errors"].append(error_msg)
+    
+    return review_result
