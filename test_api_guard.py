@@ -1,5 +1,8 @@
 import unittest
-from api_guard import extract_public_symbols, compare_symbol_sets, detect_removed_public_symbols
+from pathlib import Path
+import tempfile
+import os
+from api_guard import extract_public_symbols, compare_symbol_sets, detect_removed_public_symbols, detect_removed_public_symbols_from_files
 
 
 class TestExtractPublicSymbols(unittest.TestCase):
@@ -121,6 +124,54 @@ def func2():
 """
         result = detect_removed_public_symbols(before, after)
         self.assertEqual(result, set())
+
+
+class TestDetectRemovedPublicSymbolsFromFiles(unittest.TestCase):
+    
+    def test_one_removed_symbol_from_files(self):
+        """Test that one removed symbol is correctly identified from temporary files."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            before_file = Path(tmpdir) / "before.py"
+            after_file = Path(tmpdir) / "after.py"
+            
+            before_content = """
+def func1():
+    pass
+
+def func2():
+    pass
+"""
+            after_content = """
+def func1():
+    pass
+"""
+            
+            before_file.write_text(before_content)
+            after_file.write_text(after_content)
+            
+            result = detect_removed_public_symbols_from_files(before_file, after_file)
+            expected = {"func2"}
+            self.assertEqual(result, expected)
+    
+    def test_no_removed_symbols_from_files(self):
+        """Test that no removed symbols returns empty set from temporary files."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            before_file = Path(tmpdir) / "before.py"
+            after_file = Path(tmpdir) / "after.py"
+            
+            content = """
+def func1():
+    pass
+
+def func2():
+    pass
+"""
+            
+            before_file.write_text(content)
+            after_file.write_text(content)
+            
+            result = detect_removed_public_symbols_from_files(before_file, after_file)
+            self.assertEqual(result, set())
 
 
 if __name__ == '__main__':

@@ -1,5 +1,6 @@
 import ast
 from typing import Set
+from pathlib import Path
 
 
 def extract_public_symbols(source: str) -> Set[str]:
@@ -68,3 +69,22 @@ def detect_removed_public_symbols(
     after_symbols = extract_public_symbols(after_source)
     removed, _ = compare_symbol_sets(before_symbols, after_symbols)
     return removed
+
+
+def detect_removed_public_symbols_from_files(
+    before_file: Path,
+    after_file: Path,
+) -> set[str]:
+    """
+    Detect removed public Python symbols by reading two Python files.
+    
+    Args:
+        before_file: Path to the previous version of a Python file
+        after_file: Path to the current version of a Python file
+        
+    Returns:
+        A set of symbol names that were removed
+    """
+    before_source = before_file.read_text(encoding="utf-8")
+    after_source = after_file.read_text(encoding="utf-8")
+    return detect_removed_public_symbols(before_source, after_source)
