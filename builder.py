@@ -8,6 +8,12 @@ from typing import Sequence
 
 
 @dataclass(frozen=True)
+class BuilderTask:
+    prompt: str
+    files: tuple[Path, ...]
+
+
+@dataclass(frozen=True)
 class BuilderResult:
     return_code: int
     stdout: str
