@@ -690,6 +690,10 @@ def write_report(
     save_json(path, content)
 
 
+# Import preflight functionality
+from preflight import run_preflight
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Run Nightshift against a Git repository."
@@ -724,6 +728,14 @@ def main() -> int:
 
     STATE_DIR.mkdir(parents=True, exist_ok=True)
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
+
+    # Run preflight checks
+    preflight_result = run_preflight(project_root)
+    if not preflight_result.passed:
+        print("Preflight checks failed:")
+        for error in preflight_result.errors:
+            print(f"  - {error}")
+        return 1
 
     config = load_json(CONFIG_PATH)
     task = TASK_PATH.read_text(encoding="utf-8")
