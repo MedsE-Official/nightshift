@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import subprocess
 from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
 from typing import Sequence
 
@@ -19,6 +20,7 @@ class BuilderResult:
     stdout: str
     stderr: str
     has_changes: bool
+    status: BuilderStatus
 
     @property
     def passed(self) -> bool:
@@ -86,6 +88,13 @@ def build_environment() -> dict[str, str]:
     environment["LESS"] = "-FRX"
 
     return environment
+
+
+class BuilderStatus(Enum):
+    SUCCESS = "success"
+    NO_CHANGES = "no_changes"
+    FAILED = "failed"
+    TIMEOUT = "timeout"
 
 
 def run_builder(
@@ -169,6 +178,7 @@ def run_builder(
             stdout=stdout,
             stderr=f"{stderr}\nBuilder timed out.".strip(),
             has_changes=False,
+            status=BuilderStatus.TIMEOUT,
         )
 
     # Determine if files have changed
@@ -177,9 +187,16 @@ def run_builder(
         project_root=resolved_project_root,
     )
     
+    # Determine the status based on return code and changes
+    if completed.returncode == 0:
+        status = BuilderStatus.SUCCESS if has_changes else BuilderStatus.NO_CHANGES
+    else:
+        status = BuilderStatus.FAILED
+    
     return BuilderResult(
         return_code=completed.returncode,
         stdout=completed.stdout,
         stderr=completed.stderr,
         has_changes=has_changes,
+        status=status,
     )

@@ -3,7 +3,7 @@ import subprocess
 import unittest
 from pathlib import Path
 from unittest.mock import patch, MagicMock
-from builder import run_builder, BuilderTask, builder_task_has_changes, BuilderResult
+from builder import run_builder, BuilderTask, builder_task_has_changes, BuilderResult, BuilderStatus
 
 class TestBuilderLibrary(unittest.TestCase):
     def test_builder_is_library_only(self):
@@ -61,11 +61,25 @@ class TestBuilderLibrary(unittest.TestCase):
             return_code=0,
             stdout="test stdout",
             stderr="test stderr",
-            has_changes=True
+            has_changes=True,
+            status=BuilderStatus.SUCCESS
         )
         
         self.assertTrue(hasattr(result, 'has_changes'))
         self.assertTrue(result.has_changes)
+
+    def test_builder_result_has_status_field(self):
+        """Test that BuilderResult has the status field."""
+        result = BuilderResult(
+            return_code=0,
+            stdout="test stdout",
+            stderr="test stderr",
+            has_changes=True,
+            status=BuilderStatus.SUCCESS
+        )
+        
+        self.assertTrue(hasattr(result, 'status'))
+        self.assertEqual(result.status, BuilderStatus.SUCCESS)
 
     def test_builder_result_passed_true_when_success_and_changes(self):
         """Test that passed returns True when return_code is 0 and has_changes is True."""
@@ -73,7 +87,8 @@ class TestBuilderLibrary(unittest.TestCase):
             return_code=0,
             stdout="test stdout",
             stderr="test stderr",
-            has_changes=True
+            has_changes=True,
+            status=BuilderStatus.SUCCESS
         )
         
         self.assertTrue(result.passed)
@@ -84,7 +99,8 @@ class TestBuilderLibrary(unittest.TestCase):
             return_code=0,
             stdout="test stdout",
             stderr="test stderr",
-            has_changes=False
+            has_changes=False,
+            status=BuilderStatus.NO_CHANGES
         )
         
         self.assertFalse(result.passed)
@@ -95,7 +111,8 @@ class TestBuilderLibrary(unittest.TestCase):
             return_code=1,
             stdout="test stdout",
             stderr="test stderr",
-            has_changes=True
+            has_changes=True,
+            status=BuilderStatus.FAILED
         )
         
         self.assertFalse(result.passed)
@@ -123,6 +140,7 @@ class TestBuilderLibrary(unittest.TestCase):
             )
             
             self.assertTrue(result.has_changes)
+            self.assertEqual(result.status, BuilderStatus.SUCCESS)
 
     def test_run_builder_normal_execution_without_changes(self):
         """Test that normal execution without changed files returns has_changes=False."""
@@ -147,6 +165,7 @@ class TestBuilderLibrary(unittest.TestCase):
             )
             
             self.assertFalse(result.has_changes)
+            self.assertEqual(result.status, BuilderStatus.NO_CHANGES)
 
     def test_run_builder_timeout_returns_has_changes_false(self):
         """Test that timeout returns has_changes=False."""
@@ -167,6 +186,7 @@ class TestBuilderLibrary(unittest.TestCase):
             )
             
             self.assertFalse(result.has_changes)
+            self.assertEqual(result.status, BuilderStatus.TIMEOUT)
 
     def test_builder_task_has_changes_empty_output(self):
         """Test that builder_task_has_changes returns False for empty Git output."""
