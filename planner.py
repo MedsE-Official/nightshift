@@ -15,6 +15,23 @@ class PlannerTask:
         return len(self.files) > 0
 
 
+class Planner:
+    def __init__(self, tasks: tuple[PlannerTask, ...]):
+        self._tasks = tasks
+        self._index = 0
+
+    def next_task(self) -> PlannerTask | None:
+        if self._index >= len(self._tasks):
+            return None
+        task = self._tasks[self._index]
+        self._index += 1
+        return task
+
+    @property
+    def remaining(self) -> int:
+        return len(self._tasks) - self._index
+
+
 def load_backlog(backlog_file: Path) -> tuple[PlannerTask, ...]:
     """Load PlannerTask objects from a JSON backlog file.
     

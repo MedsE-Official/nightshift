@@ -3,7 +3,7 @@ import tempfile
 import pytest
 from dataclasses import FrozenInstanceError
 from pathlib import Path
-from planner import PlannerTask, load_backlog
+from planner import Planner, PlannerTask, load_backlog
 
 
 def test_planner_task_attributes():
@@ -333,3 +333,67 @@ def test_load_backlog_files_not_strings():
             load_backlog(backlog_file)
     finally:
         backlog_file.unlink()
+
+
+def test_planner_initialization():
+    """Test that Planner initializes correctly."""
+    task1 = PlannerTask("task1", "Task 1", "Prompt 1", (Path("file1.py"),))
+    task2 = PlannerTask("task2", "Task 2", "Prompt 2", (Path("file2.py"),))
+    
+    planner = Planner((task1, task2))
+    assert planner.remaining == 2
+    assert planner._index == 0
+
+
+def test_planner_next_task():
+    """Test that Planner.next_task() returns tasks in order."""
+    task1 = PlannerTask("task1", "Task 1", "Prompt 1", (Path("file1.py"),))
+    task2 = PlannerTask("task2", "Task 2", "Prompt 2", (Path("file2.py"),))
+    
+    planner = Planner((task1, task2))
+    
+    # First call should return first task
+    assert planner.next_task() == task1
+    assert planner.remaining == 1
+    assert planner._index == 1
+    
+    # Second call should return second task
+    assert planner.next_task() == task2
+    assert planner.remaining == 0
+    assert planner._index == 2
+    
+    # Third call should return None
+    assert planner.next_task() is None
+    assert planner.remaining == 0
+    assert planner._index == 2
+
+
+def test_planner_empty_tasks():
+    """Test that Planner works with empty task list."""
+    planner = Planner(())
+    assert planner.remaining == 0
+    assert planner.next_task() is None
+    assert planner.remaining == 0
+
+
+def test_planner_remaining_property():
+    """Test that Planner.remaining property works correctly."""
+    task1 = PlannerTask("task1", "Task 1", "Prompt 1", (Path("file1.py"),))
+    task2 = PlannerTask("task2", "Task 2", "Prompt 2", (Path("file2.py"),))
+    
+    planner = Planner((task1, task2))
+    
+    # Initially should have 2 remaining
+    assert planner.remaining == 2
+    
+    # After one call should have 1 remaining
+    planner.next_task()
+    assert planner.remaining == 1
+    
+    # After two calls should have 0 remaining
+    planner.next_task()
+    assert planner.remaining == 0
+    
+    # After three calls should still have 0 remaining
+    planner.next_task()
+    assert planner.remaining == 0
