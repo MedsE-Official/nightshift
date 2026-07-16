@@ -173,6 +173,11 @@ def func2():
                     stdout="",
                     stderr="",
                     has_changes=True
+                ),
+                test_result=ExecutionResult(
+                    return_code=0,
+                    stdout="",
+                    stderr=""
                 )
             )
             
@@ -217,6 +222,11 @@ def func1():
                     stdout="",
                     stderr="",
                     has_changes=True
+                ),
+                test_result=ExecutionResult(
+                    return_code=0,
+                    stdout="",
+                    stderr=""
                 )
             )
             
@@ -243,6 +253,11 @@ def func1():
                     stdout="",
                     stderr="",
                     has_changes=False
+                ),
+                test_result=ExecutionResult(
+                    return_code=0,
+                    stdout="",
+                    stderr=""
                 )
             )
             
@@ -269,6 +284,11 @@ def func1():
                     stdout="",
                     stderr="",
                     has_changes=False
+                ),
+                test_result=ExecutionResult(
+                    return_code=0,
+                    stdout="",
+                    stderr=""
                 )
             )
             
@@ -295,6 +315,11 @@ def func1():
                     stdout="",
                     stderr="",
                     has_changes=False
+                ),
+                test_result=ExecutionResult(
+                    return_code=0,
+                    stdout="",
+                    stderr=""
                 )
             )
             
@@ -322,6 +347,11 @@ def func1():
                     stdout="",
                     stderr="",
                     has_changes=False
+                ),
+                test_result=ExecutionResult(
+                    return_code=0,
+                    stdout="",
+                    stderr="",
                 )
             )
             
@@ -352,6 +382,11 @@ def func1():
                     stdout="",
                     stderr="",
                     has_changes=False
+                ),
+                test_result=ExecutionResult(
+                    return_code=0,
+                    stdout="",
+                    stderr="",
                 )
             )
             
@@ -382,6 +417,11 @@ def func1():
                     stdout="",
                     stderr="",
                     has_changes=False
+                ),
+                test_result=ExecutionResult(
+                    return_code=0,
+                    stdout="",
+                    stderr="",
                 )
             )
             
@@ -418,6 +458,117 @@ def func1():
                     stdout="",
                     stderr="",
                     has_changes=True
+                ),
+                test_result=ExecutionResult(
+                    return_code=0,
+                    stdout="",
+                    stderr=""
+                )
+            )
+            
+            # Verify _run_api_guard was called exactly once
+            mock_api_guard.assert_called_once()
+            
+            # Verify success conditions
+            self.assertIsInstance(result, ReviewResult)
+            self.assertTrue(result.passed)
+            self.assertEqual(result.errors, ())
+
+    def test_run_review_test_failure_returns_correct_error(self):
+        """Test that failed tests return passed=False with exactly 'Test execution failed.'."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project_root = Path(tmpdir)
+            
+            # Call run_review with failed test result
+            result = run_review(
+                project_root=project_root,
+                config={},
+                block={},
+                diff="",
+                builder_result=BuilderResult(
+                    status=BuilderStatus.SUCCESS,
+                    return_code=0,
+                    stdout="",
+                    stderr="",
+                    has_changes=True
+                ),
+                test_result=ExecutionResult(
+                    return_code=1,
+                    stdout="",
+                    stderr=""
+                )
+            )
+            
+            # Verify failure conditions
+            self.assertIsInstance(result, ReviewResult)
+            self.assertFalse(result.passed)
+            self.assertEqual(len(result.errors), 1)
+            self.assertEqual(result.errors[0], "Test execution failed.")
+
+    @patch('review._run_api_guard')
+    def test_run_review_api_guard_not_called_on_failed_test(self, mock_api_guard):
+        """Test that _run_api_guard is not called when tests fail."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project_root = Path(tmpdir)
+            
+            # Call run_review with failed test result
+            result = run_review(
+                project_root=project_root,
+                config={},
+                block={},
+                diff="",
+                builder_result=BuilderResult(
+                    status=BuilderStatus.SUCCESS,
+                    return_code=0,
+                    stdout="",
+                    stderr="",
+                    has_changes=True
+                ),
+                test_result=ExecutionResult(
+                    return_code=1,
+                    stdout="",
+                    stderr=""
+                )
+            )
+            
+            # Verify _run_api_guard was not called
+            mock_api_guard.assert_not_called()
+            
+            # Verify failure conditions
+            self.assertIsInstance(result, ReviewResult)
+            self.assertFalse(result.passed)
+            self.assertEqual(len(result.errors), 1)
+            self.assertEqual(result.errors[0], "Test execution failed.")
+
+    @patch('review._run_api_guard')
+    def test_run_review_api_guard_called_on_success_builder_and_tests(self, mock_api_guard):
+        """Test that _run_api_guard is called exactly once when both builder and tests pass."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project_root = Path(tmpdir)
+            
+            # Mock _run_api_guard to return a successful result
+            mock_api_guard.return_value = ApiGuardResult(
+                passed=True,
+                removed_symbols=set(),
+            )
+            
+            # Call run_review with successful builder and test results
+            result = run_review(
+                project_root=project_root,
+                config={},
+                block={},
+                diff="",
+                builder_result=BuilderResult(
+                    status=BuilderStatus.SUCCESS,
+                    return_code=0,
+                    stdout="",
+                    stderr="",
+                    has_changes=True
+                ),
+                test_result=ExecutionResult(
+                    return_code=0,
+                    stdout="",
+                    stderr=""
                 )
             )
             

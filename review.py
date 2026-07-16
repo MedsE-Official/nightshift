@@ -47,6 +47,7 @@ def run_review(
     block: Dict[str, Any],
     diff: str,
     builder_result: BuilderResult,
+    test_result: ExecutionResult,
 ) -> ReviewResult:
     """
     Run the review process.
@@ -80,6 +81,13 @@ def run_review(
     
     # Only run API guard check if builder succeeded
     if builder_result.status == BuilderStatus.SUCCESS:
+        # Check test result before running API Guard
+        if not test_result.passed:
+            return ReviewResult(
+                passed=False,
+                errors=("Test execution failed.",)
+            )
+        
         api_guard_result = _run_api_guard(
             project_root / "before.py",
             project_root / "after.py"
