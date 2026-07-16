@@ -42,6 +42,18 @@ class ReviewResult:
 
 
 @dataclass(frozen=True)
+class ReviewSummary:
+    builder_status: BuilderStatus
+    review_status: ReviewStatus
+    passed: bool
+    errors: tuple[str, ...]
+
+    @property
+    def failed(self) -> bool:
+        return not self.passed
+
+
+@dataclass(frozen=True)
 class ExecutionResult:
     return_code: int
     stdout: str
@@ -128,4 +140,14 @@ def run_review(
         passed=False,
         errors=("Unexpected builder status.",),
         status=ReviewStatus.UNEXPECTED_STATUS
+    )
+
+
+def to_summary(review_result: ReviewResult, builder_result: BuilderResult) -> ReviewSummary:
+    """Convert a ReviewResult and BuilderResult to a ReviewSummary."""
+    return ReviewSummary(
+        builder_status=builder_result.status,
+        review_status=review_result.status,
+        passed=review_result.passed,
+        errors=review_result.errors
     )

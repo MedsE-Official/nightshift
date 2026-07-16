@@ -2,7 +2,7 @@ import unittest
 from pathlib import Path
 import tempfile
 from unittest.mock import patch
-from review import _run_api_guard, run_review, ReviewResult, ExecutionResult, ReviewStatus
+from review import _run_api_guard, run_review, ReviewResult, ExecutionResult, ReviewStatus, ReviewSummary, to_summary
 from api_guard import ApiGuardResult
 from builder import BuilderResult, BuilderStatus
 
@@ -140,6 +140,93 @@ def func2():
             self.assertIsInstance(result, ApiGuardResult)
             self.assertTrue(result.passed)
             self.assertEqual(result.removed_symbols, set())
+
+
+class TestReviewSummary(unittest.TestCase):
+    
+    def test_review_summary_creation(self):
+        """Test that ReviewSummary can be created with all required fields."""
+        summary = ReviewSummary(
+            builder_status=BuilderStatus.SUCCESS,
+            review_status=ReviewStatus.PASSED,
+            passed=True,
+            errors=("error1", "error2")
+        )
+        
+        self.assertEqual(summary.builder_status, BuilderStatus.SUCCESS)
+        self.assertEqual(summary.review_status, ReviewStatus.PASSED)
+        self.assertTrue(summary.passed)
+        self.assertEqual(summary.errors, ("error1", "error2"))
+    
+    def test_review_summary_failed_property(self):
+        """Test that failed property returns the opposite of passed."""
+        summary = ReviewSummary(
+            builder_status=BuilderStatus.SUCCESS,
+            review_status=ReviewStatus.PASSED,
+            passed=True,
+            errors=()
+        )
+        self.assertFalse(summary.failed)
+        
+        summary = ReviewSummary(
+            builder_status=BuilderStatus.SUCCESS,
+            review_status=ReviewStatus.PASSED,
+            passed=False,
+            errors=("error1",)
+        )
+        self.assertTrue(summary.failed)
+    
+    def test_to_summary_function(self):
+        """Test that to_summary function correctly converts ReviewResult and BuilderResult to ReviewSummary."""
+        # Create test data
+        review_result = ReviewResult(
+            passed=False,
+            errors=("Test failed.",),
+            status=ReviewStatus.TESTS_FAILED
+        )
+        
+        builder_result = BuilderResult(
+            status=BuilderStatus.SUCCESS,
+            return_code=0,
+            stdout="",
+            stderr="",
+            has_changes=True
+        )
+        
+        # Call the function
+        summary = to_summary(review_result, builder_result)
+        
+        # Verify the result
+        self.assertEqual(summary.builder_status, BuilderStatus.SUCCESS)
+        self.assertEqual(summary.review_status, ReviewStatus.TESTS_FAILED)
+        self.assertFalse(summary.passed)
+        self.assertEqual(summary.errors, ("Test failed.",))
+    
+    def test_to_summary_preserves_all_fields(self):
+        """Test that to_summary preserves all fields correctly."""
+        # Create test data with various values
+        review_result = ReviewResult(
+            passed=True,
+            errors=("error1", "error2"),
+            status=ReviewStatus.API_GUARD_FAILED
+        )
+        
+        builder_result = BuilderResult(
+            status=BuilderStatus.FAILED,
+            return_code=1,
+            stdout="output",
+            stderr="error",
+            has_changes=False
+        )
+        
+        # Call the function
+        summary = to_summary(review_result, builder_result)
+        
+        # Verify all fields are preserved
+        self.assertEqual(summary.builder_status, BuilderStatus.FAILED)
+        self.assertEqual(summary.review_status, ReviewStatus.API_GUARD_FAILED)
+        self.assertTrue(summary.passed)  # This should be True from review_result
+        self.assertEqual(summary.errors, ("error1", "error2"))
 
 
 class TestRunReview(unittest.TestCase):
