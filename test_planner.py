@@ -477,3 +477,87 @@ def test_planner_current_task_with_next_builder_task():
     # After exhaustion, should still return the last task
     assert planner.next_builder_task() is None
     assert planner.current_task == task1
+
+
+def test_planner_from_backlog():
+    """Test that Planner.from_backlog() creates a Planner correctly."""
+    # Create a temporary backlog file
+    backlog_data = [
+        {
+            "id": "task-1",
+            "title": "First Task",
+            "prompt": "First prompt",
+            "files": ["file1.py"]
+        },
+        {
+            "id": "task-2",
+            "title": "Second Task",
+            "prompt": "Second prompt",
+            "files": ["file2.py"]
+        }
+    ]
+    
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+        json.dump(backlog_data, f)
+        backlog_file = Path(f.name)
+    
+    try:
+        planner = Planner.from_backlog(backlog_file)
+        
+        # Verify planner was created with correct number of tasks
+        assert planner.remaining == 2
+        
+        # Verify current_task is None immediately after construction
+        assert planner.current_task is None
+        
+        # Verify task order is preserved
+        first_task = planner.next_task()
+        assert first_task.id == "task-1"
+        assert first_task.title == "First Task"
+        assert first_task.prompt == "First prompt"
+        
+        second_task = planner.next_task()
+        assert second_task.id == "task-2"
+        assert second_task.title == "Second Task"
+        assert second_task.prompt == "Second prompt"
+        
+        # Verify exhaustion
+        assert planner.next_task() is None
+        assert planner.remaining == 0
+    finally:
+        backlog_file.unlink()
+
+
+def test_planner_from_backlog_malformed_json():
+    """Test that malformed JSON in backlog propagates json.JSONDecodeError."""
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+        f.write('{"invalid": json}')
+        backlog_file = Path(f.name)
+    
+    try:
+        with pytest.raises(json.JSONDecodeError):
+            Planner.from_backlog(backlog_file)
+    finally:
+        backlog_file.unlink()
+
+
+def test_planner_from_backlog_invalid_backlog():
+    """Test that invalid backlog propagates ValueError."""
+    # Test missing required field
+    backlog_data = [
+        {
+            "id": "task-1",
+            "title": "Test Task"
+            # Missing prompt and files
+        }
+    ]
+    
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+        json.dump(backlog_data, f)
+        backlog_file = Path(f.name)
+    
+    try:
+        with pytest.raises(ValueError, match="Task at index 0 missing required field 'prompt'"):
+            Planner.from_backlog(backlog_file)
+    finally:
+        backlog_file.unlink()

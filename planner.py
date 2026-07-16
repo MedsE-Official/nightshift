@@ -23,6 +23,11 @@ class Planner:
         self._index = 0
         self._current_task = None
 
+    @classmethod
+    def from_backlog(cls, backlog_file: Path) -> 'Planner':
+        tasks = load_backlog(backlog_file)
+        return cls(tasks)
+
     def next_task(self) -> PlannerTask | None:
         if self._index >= len(self._tasks):
             return None
