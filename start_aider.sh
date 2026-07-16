@@ -7,7 +7,6 @@ aider \
   --model openai/qwen3-coder:latest \
   --no-show-model-warnings \
   --no-pretty \
-  --no-stream \
   --yes-always \
   --no-auto-commits \
   "$@"
