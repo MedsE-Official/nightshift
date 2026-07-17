@@ -704,7 +704,7 @@ def execute_cycle(
     config: dict[str, Any],
 ) -> CycleResult | None:
     # Ask the planner for exactly one BuilderTask
-    task = planner.plan_one(project_root, config)
+    task = planner.next_builder_task()
     
     # If no BuilderTask exists, return None
     if not task:

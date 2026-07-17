@@ -245,7 +245,7 @@ class TestOrchestrator(unittest.TestCase):
     def test_execute_cycle_returns_none_when_no_task(self, mock_planner_class):
         # Setup mock
         mock_planner = MagicMock()
-        mock_planner.plan_one.return_value = None
+        mock_planner.next_builder_task.return_value = None
         mock_planner_class.return_value = mock_planner
         
         # Test execute_cycle returns None when no task
@@ -256,13 +256,20 @@ class TestOrchestrator(unittest.TestCase):
         )
         
         self.assertIsNone(result)
-        mock_planner.plan_one.assert_called_once()
+        mock_planner.next_builder_task.assert_called_once_with()
 
     @patch('orchestrator.Planner')
     def test_execute_cycle_executes_full_cycle(self, mock_planner_class):
         # Setup mocks
         mock_planner = MagicMock()
-        mock_planner.plan_one.return_value = MagicMock()
+        
+        # Create a BuilderTask instance
+        from orchestrator import BuilderTask
+        task = BuilderTask(
+            prompt="Implement the example",
+            files=(Path("example.py"),),
+        )
+        mock_planner.next_builder_task.return_value = task
         mock_planner_class.return_value = mock_planner
         
         mock_builder_result = MagicMock()
@@ -284,6 +291,9 @@ class TestOrchestrator(unittest.TestCase):
             orchestrator.run_builder.assert_called_once()
             orchestrator.run_tests.assert_called_once()
             orchestrator.run_review.assert_called_once()
+            
+            # Verify that next_builder_task was called
+            mock_planner.next_builder_task.assert_called_once_with()
             
             # Verify result is correct type
             self.assertIsInstance(result, orchestrator.CycleResult)
