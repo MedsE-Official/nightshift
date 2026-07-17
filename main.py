@@ -5,57 +5,50 @@ from builder import BuilderTask, run_builder
 
 
 PROMPT = """
-Task 2.5.1 – Design the orchestration refactor
+Task 2.5.1 – Introduce execute_cycle()
 
-Inspect only:
+Implement a minimal execute_cycle() function.
+
+Modify only:
 
 - orchestrator.py
-- planner.py
-- builder.py
-- test_runner.py
-- review.py
+- test_orchestrator.py
 
-Do not modify any files.
+Requirements:
 
-Nightshift currently contains two orchestration flows:
+- Add execute_cycle().
+- Accept:
+    planner,
+    project_root,
+    config.
+- Ask the planner for exactly one BuilderTask.
+- If no BuilderTask exists, return None.
+- Call run_builder() exactly once.
+- Call run_tests() exactly once.
+- Call run_review() exactly once.
+- Return a CycleResult containing:
+    builder_result,
+    test_result,
+    review_result.
 
-1. The existing orchestration inside main().
-2. The new execute_cycle() orchestration.
+Constraints:
 
-Design how these should be unified so execute_cycle() becomes the single owner of one development iteration.
-
-For each responsibility, determine its owner:
-
-- selecting the next BuilderTask
-- running Builder
-- running tests
-- capturing the Git diff
-- running Review
-- updating state
-- writing reports
-- retry handling
-- deciding whether another cycle should start
-
-Produce:
-
-1. A responsibility matrix.
-2. The proposed execute_cycle() signature.
-3. The minimal implementation plan.
-4. A migration plan consisting of microtasks where each implementation task modifies at most two files.
-5. Any risks or unresolved architectural decisions.
-
-Do not implement anything.
-Do not refactor.
-Do not change public APIs.
-Do not commit or push.
+- Do not modify main().
+- Do not move existing logic.
+- Do not implement retries.
+- Do not update state.
+- Do not create reports.
+- Do not capture Git diffs.
+- Do not perform checkpointing.
+- Do not change Builder, Review or TestRunner APIs.
+- Add only the tests required for execute_cycle().
+- Preserve all existing behaviour.
+- Do not commit or push.
 """.strip()
 
 FILES = [
     Path("orchestrator.py"),
-    Path("planner.py"),
-    Path("builder.py"),
-    Path("test_runner.py"),
-    Path("review.py"),
+    Path("test_orchestrator.py"),
 ]
 
 

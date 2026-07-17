@@ -241,5 +241,55 @@ class TestOrchestrator(unittest.TestCase):
             
             self.assertIn("Ollama returnerade ogiltig JSON", str(context.exception))
 
+    @patch('orchestrator.Planner')
+    def test_execute_cycle_returns_none_when_no_task(self, mock_planner_class):
+        # Setup mock
+        mock_planner = MagicMock()
+        mock_planner.plan_one.return_value = None
+        mock_planner_class.return_value = mock_planner
+        
+        # Test execute_cycle returns None when no task
+        result = orchestrator.execute_cycle(
+            planner=mock_planner,
+            project_root=Path("."),
+            config={}
+        )
+        
+        self.assertIsNone(result)
+        mock_planner.plan_one.assert_called_once()
+
+    @patch('orchestrator.Planner')
+    def test_execute_cycle_executes_full_cycle(self, mock_planner_class):
+        # Setup mocks
+        mock_planner = MagicMock()
+        mock_planner.plan_one.return_value = MagicMock()
+        mock_planner_class.return_value = mock_planner
+        
+        mock_builder_result = MagicMock()
+        mock_test_result = True
+        mock_review_result = MagicMock()
+        
+        with patch('orchestrator.run_builder', return_value=mock_builder_result), \
+             patch('orchestrator.run_tests', return_value=mock_test_result), \
+             patch('orchestrator.run_review', return_value=mock_review_result):
+            
+            # Test execute_cycle executes full cycle
+            result = orchestrator.execute_cycle(
+                planner=mock_planner,
+                project_root=Path("."),
+                config={"timeout_minutes_per_aider_run": 1}
+            )
+            
+            # Verify all functions were called
+            orchestrator.run_builder.assert_called_once()
+            orchestrator.run_tests.assert_called_once()
+            orchestrator.run_review.assert_called_once()
+            
+            # Verify result is correct type
+            self.assertIsInstance(result, orchestrator.CycleResult)
+            self.assertEqual(result.builder_result, mock_builder_result)
+            self.assertEqual(result.test_result, mock_test_result)
+            self.assertEqual(result.review_result, mock_review_result)
+
 if __name__ == '__main__':
     unittest.main()

@@ -697,11 +697,52 @@ class CycleResult:
     review_result: ReviewResult
 
 
+def execute_cycle(
+    *,
+    planner: Planner,
+    project_root: Path,
+    config: dict[str, Any],
+) -> CycleResult | None:
+    # Ask the planner for exactly one BuilderTask
+    task = planner.plan_one(project_root, config)
+    
+    # If no BuilderTask exists, return None
+    if not task:
+        return None
+    
+    # Call run_builder() exactly once
+    builder_result = run_builder(
+        task=task,
+        project_root=project_root,
+        timeout_seconds=int(config["timeout_minutes_per_aider_run"]) * 60,
+    )
+    
+    # Call run_tests() exactly once
+    test_result = run_tests(
+        project_root=project_root,
+        config=config,
+    )
+    
+    # Call run_review() exactly once
+    review_result = run_review(
+        task=task,
+        project_root=project_root,
+        config=config,
+    )
+    
+    # Return a CycleResult containing builder_result, test_result, review_result
+    return CycleResult(
+        builder_result=builder_result,
+        test_result=test_result,
+        review_result=review_result,
+    )
+
+
 # Import preflight functionality
 from preflight import run_preflight
 
 # Import existing types for CycleResult
-from planner import Planner
+from planner import Planner, BuilderTask
 from builder import BuilderResult, run_builder
 from review import ReviewResult, run_review
 from test_runner import run_tests
