@@ -241,36 +241,16 @@ class TestOrchestrator(unittest.TestCase):
             
             self.assertIn("Ollama returnerade ogiltig JSON", str(context.exception))
 
-    @patch('orchestrator.Planner')
-    def test_execute_cycle_returns_none_when_no_task(self, mock_planner_class):
-        # Setup mock
-        mock_planner = MagicMock()
-        mock_planner.next_builder_task.return_value = None
-        mock_planner_class.return_value = mock_planner
-        
-        # Test execute_cycle returns None when no task
-        result = orchestrator.execute_cycle(
-            planner=mock_planner,
-            project_root=Path("."),
-            config={}
-        )
-        
-        self.assertIsNone(result)
-        mock_planner.next_builder_task.assert_called_once_with()
 
     @patch('orchestrator.Planner')
     def test_execute_cycle_executes_full_cycle(self, mock_planner_class):
         # Setup mocks
-        mock_planner = MagicMock()
-        
         # Create a BuilderTask instance
         from orchestrator import BuilderTask
         task = BuilderTask(
             prompt="Implement the example",
             files=(Path("example.py"),),
         )
-        mock_planner.next_builder_task.return_value = task
-        mock_planner_class.return_value = mock_planner
         
         mock_builder_result = MagicMock()
         mock_test_result = orchestrator.ExecutionResult(
@@ -290,13 +270,17 @@ class TestOrchestrator(unittest.TestCase):
             
             # Test execute_cycle executes full cycle
             result = orchestrator.execute_cycle(
-                planner=mock_planner,
+                task=task,
                 project_root=Path("."),
                 config={"timeout_minutes_per_aider_run": 1}
             )
             
             # Verify all functions were called
-            orchestrator.run_builder.assert_called_once()
+            orchestrator.run_builder.assert_called_once_with(
+                task=task,
+                project_root=Path("."),
+                timeout_seconds=60
+            )
             orchestrator.run_tests.assert_called_once_with()
             
             orchestrator.run_review.assert_called_once_with(
@@ -311,8 +295,7 @@ class TestOrchestrator(unittest.TestCase):
                 test_result=mock_test_result,
             )
             
-            # Verify that next_builder_task was called
-            mock_planner.next_builder_task.assert_called_once_with()
+            # Verify that git_review_bundle was called
             mock_git_review_bundle.assert_called_once_with(Path("."))
 
             # Verify result is correct type

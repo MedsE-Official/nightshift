@@ -699,18 +699,11 @@ class CycleResult:
 
 def execute_cycle(
     *,
-    planner: Planner,
+    task: BuilderTask,
     project_root: Path,
     config: dict[str, Any],
-) -> CycleResult | None:
-    # Ask the planner for exactly one BuilderTask
-    task = planner.next_builder_task()
-    
-    # If no BuilderTask exists, return None
-    if not task:
-        return None
-    
-    # Call run_builder() exactly once
+) -> CycleResult:
+    # Call run_builder() exactly once with the supplied task
     builder_result = run_builder(
         task=task,
         project_root=project_root,
