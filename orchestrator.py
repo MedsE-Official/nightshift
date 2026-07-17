@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 
+
 NIGHTSHIFT_ROOT = Path(__file__).resolve().parent
 CONFIG_PATH = NIGHTSHIFT_ROOT / "config.json"
 TASK_PATH = NIGHTSHIFT_ROOT / "task.md"
@@ -736,8 +737,8 @@ def execute_cycle(
 from preflight import run_preflight
 
 # Import existing types for CycleResult
-from planner import Planner, BuilderTask
-from builder import BuilderResult, run_builder
+from planner import Planner
+from builder import BuilderTask, BuilderResult, run_builder
 from review import ReviewResult, run_review
 from test_runner import ExecutionResult, run_tests
 

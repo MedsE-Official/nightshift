@@ -6,6 +6,7 @@ import os
 import shutil
 from pathlib import Path
 
+
 # Import the orchestrator module
 import orchestrator
 
@@ -246,7 +247,7 @@ class TestOrchestrator(unittest.TestCase):
     def test_execute_cycle_executes_full_cycle(self, mock_planner_class):
         # Setup mocks
         # Create a BuilderTask instance
-        from orchestrator import BuilderTask
+        from builder import BuilderTask
         task = BuilderTask(
             prompt="Implement the example",
             files=(Path("example.py"),),
