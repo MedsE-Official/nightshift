@@ -718,10 +718,7 @@ def execute_cycle(
     review_result = run_review(
         project_root=project_root,
         config=config,
-        block={
-            "prompt": task.prompt,
-            "files": [str(path) for path in task.files],
-        },
+        block=task.review_block,
         diff=diff,
         builder_result=builder_result,
         test_result=test_result,

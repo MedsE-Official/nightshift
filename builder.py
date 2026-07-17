@@ -13,6 +13,12 @@ class BuilderTask:
     prompt: str
     files: tuple[Path, ...]
 
+    @property
+    def review_block(self) -> dict[str, object]:
+        return {
+            "prompt": self.prompt,
+            "files": [str(path) for path in self.files],
+        }
 
 @dataclass(frozen=True)
 class BuilderResult:
@@ -25,6 +31,8 @@ class BuilderResult:
     @property
     def passed(self) -> bool:
         return self.return_code == 0 and self.has_changes
+
+
 
 
 def builder_task_has_changes(
