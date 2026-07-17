@@ -693,7 +693,7 @@ def write_report(
 @dataclass(frozen=True)
 class CycleResult:
     builder_result: BuilderResult
-    test_result: bool
+    test_result: ExecutionResult
     review_result: ReviewResult
 
 
@@ -718,10 +718,7 @@ def execute_cycle(
     )
     
     # Call run_tests() exactly once
-    test_result = run_tests(
-        project_root=project_root,
-        config=config,
-    )
+    test_result = run_tests()
     
     # Call run_review() exactly once
     review_result = run_review(
@@ -745,7 +742,7 @@ from preflight import run_preflight
 from planner import Planner, BuilderTask
 from builder import BuilderResult, run_builder
 from review import ReviewResult, run_review
-from test_runner import run_tests
+from test_runner import ExecutionResult, run_tests
 
 
 def parse_args() -> argparse.Namespace:

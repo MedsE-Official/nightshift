@@ -273,7 +273,11 @@ class TestOrchestrator(unittest.TestCase):
         mock_planner_class.return_value = mock_planner
         
         mock_builder_result = MagicMock()
-        mock_test_result = True
+        mock_test_result = orchestrator.ExecutionResult(
+            return_code=0,
+            stdout="tests passed",
+            stderr="",
+        )
         mock_review_result = MagicMock()
         
         with patch('orchestrator.run_builder', return_value=mock_builder_result), \
@@ -289,7 +293,7 @@ class TestOrchestrator(unittest.TestCase):
             
             # Verify all functions were called
             orchestrator.run_builder.assert_called_once()
-            orchestrator.run_tests.assert_called_once()
+            orchestrator.run_tests.assert_called_once_with()
             orchestrator.run_review.assert_called_once()
             
             # Verify that next_builder_task was called
