@@ -720,11 +720,18 @@ def execute_cycle(
     # Call run_tests() exactly once
     test_result = run_tests()
     
-    # Call run_review() exactly once
+    diff = git_review_bundle(project_root)
+
     review_result = run_review(
-        task=task,
         project_root=project_root,
         config=config,
+        block={
+            "prompt": task.prompt,
+            "files": [str(path) for path in task.files],
+        },
+        diff=diff,
+        builder_result=builder_result,
+        test_result=test_result,
     )
     
     # Return a CycleResult containing builder_result, test_result, review_result

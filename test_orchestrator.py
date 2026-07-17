@@ -282,7 +282,11 @@ class TestOrchestrator(unittest.TestCase):
         
         with patch('orchestrator.run_builder', return_value=mock_builder_result), \
              patch('orchestrator.run_tests', return_value=mock_test_result), \
-             patch('orchestrator.run_review', return_value=mock_review_result):
+             patch('orchestrator.run_review', return_value=mock_review_result), \
+             patch("orchestrator.git_review_bundle") as mock_git_review_bundle:
+            
+
+            mock_git_review_bundle.return_value = "example diff"
             
             # Test execute_cycle executes full cycle
             result = orchestrator.execute_cycle(
@@ -294,11 +298,23 @@ class TestOrchestrator(unittest.TestCase):
             # Verify all functions were called
             orchestrator.run_builder.assert_called_once()
             orchestrator.run_tests.assert_called_once_with()
-            orchestrator.run_review.assert_called_once()
+            
+            orchestrator.run_review.assert_called_once_with(
+                project_root=Path("."),
+                config={"timeout_minutes_per_aider_run": 1},
+                block={
+                    "prompt": "Implement the example",
+                    "files": ["example.py"],
+                },
+                diff="example diff",
+                builder_result=mock_builder_result,
+                test_result=mock_test_result,
+            )
             
             # Verify that next_builder_task was called
             mock_planner.next_builder_task.assert_called_once_with()
-            
+            mock_git_review_bundle.assert_called_once_with(Path("."))
+
             # Verify result is correct type
             self.assertIsInstance(result, orchestrator.CycleResult)
             self.assertEqual(result.builder_result, mock_builder_result)
