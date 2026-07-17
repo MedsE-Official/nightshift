@@ -5,6 +5,7 @@ from typing import Dict, Any
 from dataclasses import dataclass
 from api_guard import check_public_api, ApiGuardResult
 from builder import BuilderResult, BuilderStatus
+from test_runner import ExecutionResult
 
 
 class ReviewStatus(Enum):
@@ -34,36 +35,6 @@ def _run_api_guard(
     return check_public_api(before_file, after_file)
 
 
-@dataclass(frozen=True)
-class ReviewResult:
-    passed: bool
-    errors: tuple[str, ...]
-    status: "ReviewStatus"
-
-
-@dataclass(frozen=True)
-class ReviewSummary:
-    builder_status: BuilderStatus
-    review_status: ReviewStatus
-    passed: bool
-    errors: tuple[str, ...]
-
-    @property
-    def failed(self) -> bool:
-        return not self.passed
-
-
-@dataclass(frozen=True)
-class ExecutionResult:
-    return_code: int
-    stdout: str
-    stderr: str
-
-    @property
-    def passed(self) -> bool:
-        return self.return_code == 0
-
-
 def run_review(
     *,
     project_root: Path,
@@ -72,7 +43,7 @@ def run_review(
     diff: str,
     builder_result: BuilderResult,
     test_result: ExecutionResult,
-) -> ReviewResult:
+) -> "ReviewResult":
     """
     Run the review process.
     
@@ -82,6 +53,7 @@ def run_review(
         block: Block information
         diff: Git diff
         builder_result: Result from the builder execution
+        test_result: Result from test execution
         
     Returns:
         Review results
@@ -141,6 +113,25 @@ def run_review(
         errors=("Unexpected builder status.",),
         status=ReviewStatus.UNEXPECTED_STATUS
     )
+
+
+@dataclass(frozen=True)
+class ReviewResult:
+    passed: bool
+    errors: tuple[str, ...]
+    status: "ReviewStatus"
+
+
+@dataclass(frozen=True)
+class ReviewSummary:
+    builder_status: BuilderStatus
+    review_status: ReviewStatus
+    passed: bool
+    errors: tuple[str, ...]
+
+    @property
+    def failed(self) -> bool:
+        return not self.passed
 
 
 def to_summary(review_result: ReviewResult, builder_result: BuilderResult) -> ReviewSummary:

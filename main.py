@@ -5,20 +5,57 @@ from builder import BuilderTask, run_builder
 
 
 PROMPT = """
-Change only test_builder.py.
+Task 2.5.1 – Design the orchestration refactor
 
-Replace the placeholder test for run_builder() with a real signature test using inspect.signature.
+Inspect only:
 
-Assert that:
-- "task" is present;
-- "prompt" is absent;
-- "files" is absent.
+- orchestrator.py
+- planner.py
+- builder.py
+- test_runner.py
+- review.py
 
-Do not modify production code or any other test.
+Do not modify any files.
+
+Nightshift currently contains two orchestration flows:
+
+1. The existing orchestration inside main().
+2. The new execute_cycle() orchestration.
+
+Design how these should be unified so execute_cycle() becomes the single owner of one development iteration.
+
+For each responsibility, determine its owner:
+
+- selecting the next BuilderTask
+- running Builder
+- running tests
+- capturing the Git diff
+- running Review
+- updating state
+- writing reports
+- retry handling
+- deciding whether another cycle should start
+
+Produce:
+
+1. A responsibility matrix.
+2. The proposed execute_cycle() signature.
+3. The minimal implementation plan.
+4. A migration plan consisting of microtasks where each implementation task modifies at most two files.
+5. Any risks or unresolved architectural decisions.
+
+Do not implement anything.
+Do not refactor.
+Do not change public APIs.
+Do not commit or push.
 """.strip()
 
 FILES = [
-    Path("test_builder.py"),
+    Path("orchestrator.py"),
+    Path("planner.py"),
+    Path("builder.py"),
+    Path("test_runner.py"),
+    Path("review.py"),
 ]
 
 

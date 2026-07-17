@@ -690,8 +690,21 @@ def write_report(
     save_json(path, content)
 
 
+@dataclass(frozen=True)
+class CycleResult:
+    builder_result: BuilderResult
+    test_result: bool
+    review_result: ReviewResult
+
+
 # Import preflight functionality
 from preflight import run_preflight
+
+# Import existing types for CycleResult
+from planner import Planner
+from builder import BuilderResult, run_builder
+from review import ReviewResult, run_review
+from test_runner import run_tests
 
 
 def parse_args() -> argparse.Namespace:
@@ -705,6 +718,8 @@ def parse_args() -> argparse.Namespace:
         help="Path to the target Git repository. Defaults to current directory.",
     )
     return parser.parse_args()
+
+
 
 
 def main() -> int:

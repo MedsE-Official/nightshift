@@ -2,6 +2,17 @@
 
 import subprocess
 import sys
+from dataclasses import dataclass
+
+@dataclass(frozen=True)
+class ExecutionResult:
+    return_code: int
+    stdout: str
+    stderr: str
+
+    @property
+    def passed(self) -> bool:
+        return self.return_code == 0
 
 def run_tests():
     """Run all tests for the orchestrator"""
@@ -11,40 +22,38 @@ def run_tests():
         # Test compilation
         result = subprocess.run([sys.executable, "-m", "py_compile", "orchestrator.py", "config.py"], 
                               capture_output=True, text=True)
-        if result.returncode != 0:
+        if result.return_code != 0:
             print("Compilation failed:")
             print(result.stderr)
-            return False
+            return ExecutionResult(return_code=result.return_code, stdout=result.stdout, stderr=result.stderr)
         
         print("✓ Compilation successful")
         
         # Run unit tests
         result = subprocess.run([sys.executable, "-m", "unittest", "test_orchestrator.py"], 
                               capture_output=True, text=True)
-        if result.returncode != 0:
+        if result.return_code != 0:
             print("Unit tests failed:")
             print(result.stderr)
-            return False
+            return ExecutionResult(return_code=result.return_code, stdout=result.stdout, stderr=result.stderr)
             
         print("✓ Unit tests passed")
         
         # Check git diff
         result = subprocess.run(["git", "--no-pager", "diff", "--check"], 
                               capture_output=True, text=True)
-        if result.returncode != 0:
+        if result.return_code != 0:
             print("Git diff check failed:")
             print(result.stdout)
-            return False
+            return ExecutionResult(return_code=result.return_code, stdout=result.stdout, stderr=result.stderr)
             
-        print("✓ Git diff check passed")
-        
         print("\nAll checks passed!")
-        return True
+        return ExecutionResult(return_code=0, stdout="", stderr="")
         
     except Exception as e:
         print(f"Error running tests: {e}")
-        return False
+        return ExecutionResult(return_code=1, stdout="", stderr=str(e))
 
 if __name__ == "__main__":
-    success = run_tests()
-    sys.exit(0 if success else 1)
+    result = run_tests()
+    sys.exit(0 if result.passed else 1)
