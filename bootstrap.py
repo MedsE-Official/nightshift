@@ -1,8 +1,11 @@
-from pathlib import Path
-from .project_context import ProjectContext
-from .project_loader import ProjectLoader
+"""Bootstrap a Nightshift-enabled target repository."""
 
-def bootstrap(project_root: Path):
-    ctx = ProjectContext(project_root=project_root)
-    loader = ProjectLoader(ctx)
-    return loader.load_all()
+from pathlib import Path
+
+from configuration import Configuration
+
+
+def bootstrap(project_root: Path) -> Configuration:
+    """Return the validated configuration for a target project."""
+
+    return Configuration.load(project_root)
