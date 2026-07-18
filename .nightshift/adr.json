@@ -1,0 +1,53 @@
+{
+  "$schema": "../schema/adr.schema.json",
+  "schema_version": "1.0",
+  "decisions": [
+    {
+      "id": "ADR-001",
+      "title": "Two knowledge scopes",
+      "status": "accepted",
+      "context": "Nightshift must keep reusable framework guidance separate from knowledge and control files that belong to a target project.",
+      "decision": "Framework knowledge lives in the Nightshift repository. Project knowledge and all project-specific Nightshift control data live in the target project's .nightshift directory.",
+      "consequences": [
+        "Nightshift can operate on unrelated repositories without embedding project-specific knowledge.",
+        "Project-specific knowledge is versioned together with the target project's code.",
+        "Only framework and project knowledge scopes are supported."
+      ]
+    },
+    {
+      "id": "ADR-002",
+      "title": "Simplicity first",
+      "status": "accepted",
+      "context": "Nightshift must remain understandable and evolve through small, safe steps rather than speculative abstractions.",
+      "decision": "Choose the simplest implementation that satisfies the current verified need. Introduce abstractions only after repeated real use demonstrates that they are necessary.",
+      "consequences": [
+        "Changes should be small and independently verifiable.",
+        "Functions and simple data structures are preferred over frameworks and indirection.",
+        "Architecture follows observed needs rather than anticipated complexity."
+      ]
+    },
+    {
+      "id": "ADR-003",
+      "title": "Repository responsibilities",
+      "status": "accepted",
+      "context": "The boundary between the Nightshift framework and a target project must be explicit.",
+      "decision": "The Nightshift repository owns runtime behavior and framework knowledge. The target project repository owns backlog, project knowledge, architecture decisions, contracts, prompts, and project rules under .nightshift.",
+      "consequences": [
+        "Adding a new target project must not require project-specific changes to Nightshift.",
+        "Project control data can be reviewed and changed in the same workflow as project code."
+      ]
+    },
+    {
+      "id": "ADR-004",
+      "title": "JSON is the source of truth",
+      "status": "accepted",
+      "context": "Nightshift needs deterministic machine-readable control data while humans still need readable documentation.",
+      "decision": "All machine-read documents use JSON as their master representation. Human-readable documents are generated from JSON and are never authoritative.",
+      "consequences": [
+        "Nightshift reads JSON only for project control data.",
+        "Generated human-readable documents can always be recreated.",
+        "When generated documentation differs from JSON, JSON prevails."
+      ]
+    }
+  ]
+}

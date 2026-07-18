@@ -1,0 +1,9 @@
+{
+  "$schema": "../schema/project.schema.json",
+  "schema_version": "1.0",
+  "project": {
+    "id": "nightshift",
+    "name": "Nightshift",
+    "description": "A reusable AI-assisted software engineering framework."
+  }
+}

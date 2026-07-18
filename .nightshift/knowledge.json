@@ -1,0 +1,6 @@
+{
+  "$schema": "../schema/knowledge.schema.json",
+  "schema_version": "1.0",
+  "scope": "project",
+  "entries": []
+}
