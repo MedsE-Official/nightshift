@@ -1,116 +1,44 @@
-import json
-from dataclasses import dataclass
 from pathlib import Path
 
+from backlog import Backlog, Task
 from builder import BuilderTask
 
 
-@dataclass(frozen=True)
-class PlannerTask:
-    id: str
-    title: str
-    prompt: str
-    files: tuple[Path, ...]
-
-    @property
-    def has_files(self) -> bool:
-        return len(self.files) > 0
-
-
 class Planner:
-    def __init__(self, tasks: tuple[PlannerTask, ...]):
-        self._tasks = tasks
+    def __init__(self, backlog: Backlog):
+        self._tasks = backlog.tasks
         self._index = 0
-        self._current_task = None
+        self._current_task: Task | None = None
 
     @classmethod
-    def from_backlog(cls, backlog_file: Path) -> 'Planner':
-        tasks = load_backlog(backlog_file)
-        return cls(tasks)
+    def from_backlog(cls, backlog_file: Path) -> "Planner":
+        """Create a planner from a persisted backlog.
 
-    def next_task(self) -> PlannerTask | None:
+        File loading belongs to the Backlog model; Planner itself consumes the
+        resulting Backlog object.
+        """
+        return cls(Backlog.from_json_file(backlog_file))
+
+    def next_task(self) -> Task | None:
         if self._index >= len(self._tasks):
             return None
+
         task = self._tasks[self._index]
         self._index += 1
         self._current_task = task
         return task
 
     def next_builder_task(self) -> BuilderTask | None:
-        planner_task = self.next_task()
-        if planner_task is None:
+        task = self.next_task()
+        if task is None:
             return None
-        return BuilderTask(
-            prompt=planner_task.prompt,
-            files=planner_task.files
-        )
+
+        return BuilderTask(prompt=task.prompt, files=task.files)
 
     @property
-    def current_task(self) -> PlannerTask | None:
+    def current_task(self) -> Task | None:
         return self._current_task
 
     @property
     def remaining(self) -> int:
         return len(self._tasks) - self._index
-
-
-def load_backlog(backlog_file: Path) -> tuple[PlannerTask, ...]:
-    """Load PlannerTask objects from a JSON backlog file.
-    
-    Args:
-        backlog_file: Path to the JSON backlog file
-        
-    Returns:
-        Tuple of PlannerTask objects in the same order as in the JSON array
-        
-    Raises:
-        ValueError: For any invalid structure in the backlog
-        json.JSONDecodeError: For malformed JSON
-    """
-    with open(backlog_file, 'r') as f:
-        data = json.load(f)
-    
-    # Check that top-level value is an array
-    if not isinstance(data, list):
-        raise ValueError("Top-level JSON value must be an array")
-    
-    tasks = []
-    for i, item in enumerate(data):
-        # Check that each item is an object
-        if not isinstance(item, dict):
-            raise ValueError(f"Task at index {i} must be an object")
-        
-        # Check required fields
-        required_fields = ['id', 'title', 'prompt', 'files']
-        for field in required_fields:
-            if field not in item:
-                raise ValueError(f"Task at index {i} missing required field '{field}'")
-        
-        # Validate field types
-        if not isinstance(item['id'], str):
-            raise ValueError(f"Task at index {i} id must be a string")
-        
-        if not isinstance(item['title'], str):
-            raise ValueError(f"Task at index {i} title must be a string")
-        
-        if not isinstance(item['prompt'], str):
-            raise ValueError(f"Task at index {i} prompt must be a string")
-        
-        if not isinstance(item['files'], list):
-            raise ValueError(f"Task at index {i} files must be an array")
-        
-        # Convert files to Path objects
-        try:
-            files = tuple(Path(f) for f in item['files'])
-        except TypeError:
-            raise ValueError(f"Task at index {i} files must contain only strings")
-        
-        task = PlannerTask(
-            id=item['id'],
-            title=item['title'],
-            prompt=item['prompt'],
-            files=files
-        )
-        tasks.append(task)
-    
-    return tuple(tasks)

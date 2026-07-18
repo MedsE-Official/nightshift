@@ -5,24 +5,22 @@ from builder import BuilderTask, run_builder
 
 
 PROMPT = """
-Add unit tests for execute_backlog().
+Refactor Planner to consume a Backlog instance instead of reading directly from a file.
 
 Requirements:
-- Add tests only to test_orchestrator.py.
-- Do not modify orchestrator.py.
-- Verify that Planner.from_backlog() is called exactly once with the supplied backlog_file.
-- Verify that execute_all_tasks() is called exactly once with:
-  - the planner returned by Planner.from_backlog()
-  - the supplied project_root
-  - the supplied config
-- Verify that execute_backlog() returns the tuple returned by execute_all_tasks() unchanged.
-- Do not modify existing tests.
-- Do not perform any refactoring.
+- Modify only planner.py and test_planner.py.
+- Planner shall accept a Backlog object.
+- Do not change the Backlog model.
+- Preserve existing planner behavior.
+- Update existing tests as needed.
+- Do not modify orchestrator.py or other files.
+- Do not add new functionality beyond consuming Backlog.
 """.strip()
 
 FILES = [
-    Path("orchestrator.py"),
-    Path("test_orchestrator.py"),
+    Path("planner.py"),
+    Path("test_planner.py"),
+    Path("backlog.py"),
 ]
 
 
