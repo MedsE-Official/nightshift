@@ -7,8 +7,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from jsonschema import Draft202012Validator
-from jsonschema.exceptions import ValidationError
+try:
+    from jsonschema import Draft202012Validator
+    from jsonschema.exceptions import ValidationError
+except ModuleNotFoundError as exc:
+    raise ModuleNotFoundError(
+        "ProjectLoader requires the 'jsonschema' package. "
+        "Install project dependencies with: python -m pip install -r requirements.txt"
+    ) from exc
 
 from project_context import ProjectContext
 
