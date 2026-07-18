@@ -1,7 +1,21 @@
 import os
+from enum import Enum
 from pathlib import Path
 from typing import Dict, Any
+from dataclasses import dataclass
 from api_guard import check_public_api, ApiGuardResult
+from builder import BuilderResult, BuilderStatus
+from test_runner import ExecutionResult
+
+
+class ReviewStatus(Enum):
+    PASSED = "passed"
+    BUILDER_FAILED = "builder_failed"
+    BUILDER_TIMEOUT = "builder_timeout"
+    NO_CHANGES = "no_changes"
+    TESTS_FAILED = "tests_failed"
+    API_GUARD_FAILED = "api_guard_failed"
+    UNEXPECTED_STATUS = "unexpected_status"
 
 
 def _run_api_guard(
@@ -27,7 +41,9 @@ def run_review(
     config: Dict[str, Any],
     block: Dict[str, Any],
     diff: str,
-) -> Dict[str, Any]:
+    builder_result: BuilderResult,
+    test_result: ExecutionResult,
+) -> "ReviewResult":
     """
     Run the review process.
     
@@ -36,27 +52,93 @@ def run_review(
         config: Configuration dictionary
         block: Block information
         diff: Git diff
+        builder_result: Result from the builder execution
+        test_result: Result from test execution
         
     Returns:
         Review results
     """
-    # Run API guard check
-    api_guard_result = _run_api_guard(
-        project_root / "before.py",
-        project_root / "after.py"
+    # Handle different builder statuses before running API Guard
+    if builder_result.status == BuilderStatus.FAILED:
+        return ReviewResult(
+            passed=False,
+            errors=("Builder execution failed.",),
+            status=ReviewStatus.BUILDER_FAILED
+        )
+    elif builder_result.status == BuilderStatus.TIMEOUT:
+        return ReviewResult(
+            passed=False,
+            errors=("Builder execution timed out.",),
+            status=ReviewStatus.BUILDER_TIMEOUT
+        )
+    elif builder_result.status == BuilderStatus.NO_CHANGES:
+        return ReviewResult(
+            passed=False,
+            errors=("Builder produced no file changes.",),
+            status=ReviewStatus.NO_CHANGES
+        )
+    
+    # Only run API guard check if builder succeeded
+    if builder_result.status == BuilderStatus.SUCCESS:
+        # Check test result before running API Guard
+        if not test_result.passed:
+            return ReviewResult(
+                passed=False,
+                errors=("Test execution failed.",),
+                status=ReviewStatus.TESTS_FAILED
+            )
+        
+        api_guard_result = _run_api_guard(
+            project_root / "before.py",
+            project_root / "after.py"
+        )
+        
+        # Initialize errors
+        errors = ()
+        
+        # Add API guard errors if check failed
+        if not api_guard_result.passed:
+            error_msg = f"Public API change detected: removed symbols {sorted(api_guard_result.removed_symbols)}"
+            errors = (error_msg,)
+        
+        return ReviewResult(
+            passed=api_guard_result.passed,
+            errors=errors,
+            status=ReviewStatus.PASSED if api_guard_result.passed else ReviewStatus.API_GUARD_FAILED
+        )
+    
+    # Default case - should not happen with valid BuilderStatus values
+    return ReviewResult(
+        passed=False,
+        errors=("Unexpected builder status.",),
+        status=ReviewStatus.UNEXPECTED_STATUS
     )
-    
-    # Initialize review result
-    review_result = {
-        "review": "placeholder",
-        "api_guard_result": api_guard_result,
-    }
-    
-    # Add API guard errors if check failed
-    if not api_guard_result.passed:
-        if "errors" not in review_result:
-            review_result["errors"] = []
-        error_msg = f"Public API change detected: removed symbols {sorted(api_guard_result.removed_symbols)}"
-        review_result["errors"].append(error_msg)
-    
-    return review_result
+
+
+@dataclass(frozen=True)
+class ReviewResult:
+    passed: bool
+    errors: tuple[str, ...]
+    status: "ReviewStatus"
+
+
+@dataclass(frozen=True)
+class ReviewSummary:
+    builder_status: BuilderStatus
+    review_status: ReviewStatus
+    passed: bool
+    errors: tuple[str, ...]
+
+    @property
+    def failed(self) -> bool:
+        return not self.passed
+
+
+def to_summary(review_result: ReviewResult, builder_result: BuilderResult) -> ReviewSummary:
+    """Convert a ReviewResult and BuilderResult to a ReviewSummary."""
+    return ReviewSummary(
+        builder_status=builder_result.status,
+        review_status=review_result.status,
+        passed=review_result.passed,
+        errors=review_result.errors
+    )

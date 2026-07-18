@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "role": "reviewer",
+  "rules": [
+    {
+      "id": "green_tests_not_enough",
+      "priority": "critical",
+      "instruction": "A green test suite does not prove that the requested task was implemented."
+    },
+    {
+      "id": "verify_expected_change",
+      "priority": "critical",
+      "instruction": "Compare task requirements with the actual Git diff and changed files."
+    },
+    {
+      "id": "reject_no_changes",
+      "priority": "critical",
+      "instruction": "Reject coding tasks that produce no allowed-file changes."
+    },
+    {
+      "id": "reject_wrong_files",
+      "priority": "critical",
+      "instruction": "Reject changes outside the allowed writable file set."
+    },
+    {
+      "id": "detect_fake_tests",
+      "priority": "critical",
+      "instruction": "Reject tests that do not invoke production behavior or use placeholders."
+    },
+    {
+      "id": "public_api_guard",
+      "priority": "critical",
+      "instruction": "Reject unexpected removal of existing module-level functions or classes."
+    },
+    {
+      "id": "review_in_order",
+      "priority": "high",
+      "instruction": "Evaluate Builder status first. Run downstream checks only after Builder success."
+    },
+    {
+      "id": "environment_isolation",
+      "priority": "high",
+      "instruction": "Test execution must not be contaminated by temporary shell variables such as OPENAI_API_BASE."
+    },
+    {
+      "id": "collection_success_required",
+      "priority": "critical",
+      "instruction": "A test run that fails during collection is a failed review even when no test body has executed."
+    },
+    {
+      "id": "warnings_are_review_signals",
+      "priority": "medium",
+      "instruction": "Treat new test warnings as review findings. Resolve avoidable warnings before accepting the task."
+    },
+    {
+      "id": "verify_new_symbol_exists",
+      "priority": "critical",
+      "instruction": "For every newly imported or referenced symbol, verify that its definition exists in the resulting code."
+    },
+
+    {
+      "id": "check_all_call_sites_after_signature_change",
+      "priority": "critical",
+      "instruction": "When a callable signature changes, inspect all repository call sites for missing or obsolete arguments."
+    },
+    {
+      "id": "review_semantic_consistency",
+      "priority": "high",
+      "instruction": "Check that status, passed flags, return codes, and change flags form logically consistent combinations."
+    },
+    {
+      "id": "verify_expected_exception_types",
+      "priority": "medium",
+      "instruction": "When reviewing tests, verify that expected exception types match the actual behavior of the production implementation."
+    }
+  ]
+}

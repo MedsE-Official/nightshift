@@ -6,8 +6,10 @@ import os
 import shutil
 from pathlib import Path
 
+
 # Import the orchestrator module
 import orchestrator
+import cycle_execution
 
 class TestOrchestrator(unittest.TestCase):
     
@@ -54,7 +56,7 @@ class TestOrchestrator(unittest.TestCase):
         os.chdir(self.original_cwd)
         shutil.rmtree(self.test_dir)
     
-    @patch('orchestrator.settings')
+    @patch('orchestrator_runtime.settings')
     def test_process_environment_uses_openai_api_base(self, mock_settings):
         # Setup mock settings
         mock_settings.openai_api_base = "http://mock-ollama:11434/v1"
@@ -64,7 +66,7 @@ class TestOrchestrator(unittest.TestCase):
         self.assertEqual(env["OPENAI_API_BASE"], "http://mock-ollama:11434/v1")
         self.assertEqual(env["OPENAI_API_KEY"], "ollama")
     
-    @patch('orchestrator.ollama_structured')
+    @patch('ollama_workflow.ollama_structured')
     def test_planner_uses_ollama_chat_url(self, mock_ollama):
         # Setup mock
         mock_ollama.return_value = {
@@ -74,7 +76,7 @@ class TestOrchestrator(unittest.TestCase):
         }
         
         # This should use the OLLAMA_CHAT_URL from settings
-        with patch('orchestrator.settings') as mock_settings:
+        with patch('ollama_workflow.settings') as mock_settings:
             mock_settings.ollama_chat_url = "http://mock-ollama:11434/api/chat"
             
             try:
@@ -91,7 +93,7 @@ class TestOrchestrator(unittest.TestCase):
             # Verify that ollama_structured was called with the correct URL
             mock_ollama.assert_called()
     
-    @patch('orchestrator.ollama_structured')
+    @patch('ollama_workflow.ollama_structured')
     def test_reviewer_uses_ollama_chat_url(self, mock_ollama):
         # Setup mock
         mock_ollama.return_value = {
@@ -101,7 +103,7 @@ class TestOrchestrator(unittest.TestCase):
             "required_fixes": []
         }
         
-        with patch('orchestrator.settings') as mock_settings:
+        with patch('ollama_workflow.settings') as mock_settings:
             mock_settings.ollama_chat_url = "http://mock-ollama:11434/api/chat"
             
             try:
@@ -160,7 +162,7 @@ class TestOrchestrator(unittest.TestCase):
     
     def test_aider_arguments(self):
         # Test that aider is called with correct arguments
-        with patch('orchestrator.run_command') as mock_run_command:
+        with patch('aider_workflow.run_command') as mock_run_command:
             mock_run_command.return_value = MagicMock(return_code=0, stdout="", stderr="")
             
             try:
@@ -187,7 +189,7 @@ class TestOrchestrator(unittest.TestCase):
             self.assertIn("--no-auto-commits", call_args)
     
     def test_verification_always_runs_git_diff_check(self):
-        with patch('orchestrator.run_command') as mock_run_command:
+        with patch('aider_workflow.run_command') as mock_run_command:
             mock_run_command.return_value = MagicMock(return_code=0, stdout="", stderr="")
             
             try:
@@ -240,6 +242,237 @@ class TestOrchestrator(unittest.TestCase):
                 )
             
             self.assertIn("Ollama returnerade ogiltig JSON", str(context.exception))
+
+
+    def test_execute_cycle_executes_full_cycle(self):
+        # Setup mocks
+        # Create a BuilderTask instance
+        from builder import BuilderTask
+        task = BuilderTask(
+            prompt="Implement the example",
+            files=(Path("example.py"),),
+        )
+        
+        mock_builder_result = MagicMock()
+        mock_test_result = orchestrator.ExecutionResult(
+            return_code=0,
+            stdout="tests passed",
+            stderr="",
+        )
+        mock_review_result = MagicMock()
+        
+        with patch('cycle_execution.run_builder', return_value=mock_builder_result), \
+             patch('cycle_execution.run_tests', return_value=mock_test_result), \
+             patch('cycle_execution.run_review', return_value=mock_review_result), \
+             patch("cycle_execution.git_review_bundle") as mock_git_review_bundle:
+            
+
+            mock_git_review_bundle.return_value = "example diff"
+            
+            # Test execute_cycle executes full cycle
+            result = orchestrator.execute_cycle(
+                task=task,
+                project_root=Path("."),
+                config={"timeout_minutes_per_aider_run": 1}
+            )
+            
+            # Verify all functions were called
+            cycle_execution.run_builder.assert_called_once_with(
+                task=task,
+                project_root=Path("."),
+                timeout_seconds=60
+            )
+            cycle_execution.run_tests.assert_called_once_with()
+            
+            cycle_execution.run_review.assert_called_once_with(
+                project_root=Path("."),
+                config={"timeout_minutes_per_aider_run": 1},
+                block={
+                    "prompt": "Implement the example",
+                    "files": ["example.py"],
+                },
+                diff="example diff",
+                builder_result=mock_builder_result,
+                test_result=mock_test_result,
+            )
+            
+            # Verify that git_review_bundle was called
+            mock_git_review_bundle.assert_called_once_with(Path("."))
+
+            # Verify result is correct type
+            self.assertIsInstance(result, orchestrator.CycleResult)
+            self.assertEqual(result.builder_result, mock_builder_result)
+            self.assertEqual(result.test_result, mock_test_result)
+            self.assertEqual(result.review_result, mock_review_result)
+
+    def test_execute_next_task_no_task(self):
+        # Setup mock to return None
+        mock_planner = MagicMock()
+        mock_planner.next_builder_task.return_value = None
+        
+        result = orchestrator.execute_next_task(
+            planner=mock_planner,
+            project_root=Path("."),
+            config={}
+        )
+        
+        # Should return None when no task is available
+        self.assertIsNone(result)
+        
+        # Verify next_builder_task was called exactly once
+        mock_planner.next_builder_task.assert_called_once_with()
+
+    def test_execute_next_task_with_task(self):
+        # Setup mocks
+        from builder import BuilderTask
+        
+        mock_planner = MagicMock()
+        mock_task = BuilderTask(
+            prompt="Implement the example",
+            files=(Path("example.py"),),
+        )
+        mock_planner.next_builder_task.return_value = mock_task
+        
+        mock_cycle_result = MagicMock()
+        
+        with patch('cycle_execution.execute_cycle', return_value=mock_cycle_result):
+            result = orchestrator.execute_next_task(
+                planner=mock_planner,
+                project_root=Path("."),
+                config={"timeout_minutes_per_aider_run": 1}
+            )
+            
+            # Should return the CycleResult from execute_cycle
+            self.assertEqual(result, mock_cycle_result)
+            
+            # Verify next_builder_task was called exactly once
+            mock_planner.next_builder_task.assert_called_once_with()
+            
+            # Verify execute_cycle was called with correct parameters
+            cycle_execution.execute_cycle.assert_called_once_with(
+                task=mock_task,
+                project_root=Path("."),
+                config={"timeout_minutes_per_aider_run": 1}
+            )
+
+    def test_execute_all_tasks_empty_planner(self):
+        # Setup mock to return None immediately
+        mock_planner = MagicMock()
+        mock_planner.next_builder_task.return_value = None
+        
+        result = orchestrator.execute_all_tasks(
+            planner=mock_planner,
+            project_root=Path("."),
+            config={}
+        )
+        
+        # Should return empty tuple
+        self.assertEqual(result, ())
+        
+        # Verify next_builder_task was called exactly once
+        mock_planner.next_builder_task.assert_called_once_with()
+
+    def test_execute_all_tasks_multiple_tasks(self):
+        # Setup mocks for multiple tasks
+        from builder import BuilderTask
+        
+        mock_planner = MagicMock()
+        
+        # First task returns a cycle result
+        mock_task1 = BuilderTask(
+            prompt="Implement the example",
+            files=(Path("example1.py"),),
+        )
+        mock_cycle_result1 = MagicMock()
+        
+        # Second task returns None (end of tasks)
+        mock_task2 = None
+        
+        # Mock the sequence of calls
+        mock_planner.next_builder_task.side_effect = [mock_task1, mock_task2]
+        
+        with patch('cycle_execution.execute_cycle', return_value=mock_cycle_result1):
+            result = orchestrator.execute_all_tasks(
+                planner=mock_planner,
+                project_root=Path("."),
+                config={"timeout_minutes_per_aider_run": 1}
+            )
+            
+            # Should return tuple with one CycleResult
+            self.assertEqual(len(result), 1)
+            self.assertEqual(result[0], mock_cycle_result1)
+            
+            # Verify next_builder_task was called twice
+            self.assertEqual(mock_planner.next_builder_task.call_count, 2)
+            
+            # Verify execute_cycle was called once
+            cycle_execution.execute_cycle.assert_called_once_with(
+                task=mock_task1,
+                project_root=Path("."),
+                config={"timeout_minutes_per_aider_run": 1}
+            )
+
+    def test_execute_all_tasks_stops_when_none(self):
+        # Setup mocks
+        from builder import BuilderTask
+        
+        mock_planner = MagicMock()
+        
+        # First task returns a cycle result
+        mock_task1 = BuilderTask(
+            prompt="Implement the example",
+            files=(Path("example1.py"),),
+        )
+        mock_cycle_result1 = MagicMock()
+        
+        # Second task returns None (should stop execution)
+        mock_task2 = None
+        
+        # Mock the sequence of calls
+        mock_planner.next_builder_task.side_effect = [mock_task1, mock_task2]
+        
+        with patch('cycle_execution.execute_cycle', return_value=mock_cycle_result1):
+            result = orchestrator.execute_all_tasks(
+                planner=mock_planner,
+                project_root=Path("."),
+                config={"timeout_minutes_per_aider_run": 1}
+            )
+            
+            # Should return tuple with one CycleResult
+            self.assertEqual(len(result), 1)
+            self.assertEqual(result[0], mock_cycle_result1)
+            
+            # Verify next_builder_task was called twice (once for each task, once for None)
+            self.assertEqual(mock_planner.next_builder_task.call_count, 2)
+
+    def test_execute_backlog_delegates_to_execute_all_tasks(self):
+        backlog_file = Path("backlog.md")
+        project_root = Path(".")
+        config = {"timeout_minutes_per_aider_run": 1}
+
+        mock_planner = MagicMock()
+        mock_results = (MagicMock(), MagicMock())
+
+        with patch(
+            "cycle_execution.Planner.from_backlog",
+            return_value=mock_planner,
+        ) as mock_from_backlog, patch(
+            "cycle_execution.execute_all_tasks",
+            return_value=mock_results,
+        ) as mock_execute_all_tasks:
+            result = orchestrator.execute_backlog(
+                backlog_file=backlog_file,
+                project_root=project_root,
+                config=config,
+            )
+
+        mock_from_backlog.assert_called_once_with(backlog_file)
+        mock_execute_all_tasks.assert_called_once_with(
+            planner=mock_planner,
+            project_root=project_root,
+            config=config,
+        )
+        self.assertIs(result, mock_results)
 
 if __name__ == '__main__':
     unittest.main()

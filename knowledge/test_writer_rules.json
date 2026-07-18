@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "role": "test_writer",
+  "rules": [
+    {
+      "id": "test_real_behavior",
+      "priority": "critical",
+      "instruction": "Tests must call the production function being tested."
+    },
+    {
+      "id": "no_placeholder_assertions",
+      "priority": "critical",
+      "instruction": "Never use self.assertTrue(True), skippable conditional assertions, or tests that only verify callable()."
+    },
+    {
+      "id": "valid_fixtures",
+      "priority": "critical",
+      "instruction": "Construct dataclasses using their actual fields and valid combinations."
+    },
+    {
+      "id": "test_control_flow",
+      "priority": "high",
+      "instruction": "When behavior depends on status, mock downstream calls and verify whether they were or were not called."
+    },
+    {
+      "id": "preserve_test_count",
+      "priority": "high",
+      "instruction": "Do not remove or overwrite existing tests unless explicitly required."
+    },
+    {
+      "id": "focused_tests",
+      "priority": "high",
+      "instruction": "Add one focused test per requested behavior and avoid unrelated test refactoring."
+    },
+    {
+      "id": "imported_test_prefixed_types",
+      "priority": "high",
+      "instruction": "When importing a production class whose name begins with Test into a pytest test module, alias it to a name that does not begin with Test to avoid collection warnings."
+    },
+    {
+      "id": "update_all_required_arguments",
+      "priority": "critical",
+      "instruction": "When a required function argument is added, search all existing calls and update every fixture, including older control-flow tests."
+    },
+    {
+      "id": "assert_status_and_behavior",
+      "priority": "high",
+      "instruction": "For status-driven code, verify both the returned status and the observable control flow, such as whether downstream functions were called."
+    },
+    {
+      "id": "avoid_internally_inconsistent_fixtures",
+      "priority": "high",
+      "instruction": "Prefer logically consistent test data. Do not combine passed=True with a failure status unless the test explicitly verifies field copying without validation."
+    },
+    {
+      "id": "assert_exact_exception_type",
+      "priority": "high",
+      "instruction": "When testing exceptions, assert the specific exception type raised by the production code rather than a broader or assumed exception."
+    }
+  ]
+}

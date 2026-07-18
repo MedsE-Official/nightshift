@@ -3,19 +3,83 @@ from __future__ import annotations
 import os
 import subprocess
 from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
 from typing import Sequence
 
+
+@dataclass(frozen=True)
+class BuilderTask:
+    prompt: str
+    files: tuple[Path, ...]
+
+    @property
+    def review_block(self) -> dict[str, object]:
+        return {
+            "prompt": self.prompt,
+            "files": [str(path) for path in self.files],
+        }
 
 @dataclass(frozen=True)
 class BuilderResult:
     return_code: int
     stdout: str
     stderr: str
+    has_changes: bool
+    status: BuilderStatus
 
     @property
     def passed(self) -> bool:
-        return self.return_code == 0
+        return self.return_code == 0 and self.has_changes
+
+
+
+
+def builder_task_has_changes(
+    *,
+    task: BuilderTask,
+    project_root: Path,
+) -> bool:
+    """Detect whether any file belonging to a BuilderTask has changed in Git."""
+    
+    resolved_project_root = project_root.expanduser().resolve()
+    
+    # Prepare the list of files for git status
+    file_arguments: list[str] = []
+    
+    for file_path in task.files:
+        absolute_path = (
+            file_path
+            if file_path.is_absolute()
+            else resolved_project_root / file_path
+        ).resolve()
+        
+        try:
+            relative_path = absolute_path.relative_to(resolved_project_root)
+        except ValueError as error:
+            raise ValueError(
+                f"Builder file must be inside project root: {absolute_path}"
+            ) from error
+            
+        file_arguments.append(str(relative_path))
+    
+    # Run git status --porcelain on the task files
+    command = ["git", "status", "--porcelain", "--"] + file_arguments
+    
+    try:
+        completed = subprocess.run(
+            command,
+            cwd=resolved_project_root,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+    except FileNotFoundError:
+        # Git is not available
+        return False
+    
+    # Return True if there's any output (changed or untracked files)
+    return bool(completed.stdout.strip())
 
 
 def build_environment() -> dict[str, str]:
@@ -34,10 +98,16 @@ def build_environment() -> dict[str, str]:
     return environment
 
 
+class BuilderStatus(Enum):
+    SUCCESS = "success"
+    NO_CHANGES = "no_changes"
+    FAILED = "failed"
+    TIMEOUT = "timeout"
+
+
 def run_builder(
     *,
-    prompt: str,
-    files: Sequence[Path],
+    task: BuilderTask,
     project_root: Path,
     timeout_seconds: int = 900,
 ) -> BuilderResult:
@@ -50,12 +120,12 @@ def run_builder(
             f"Project root does not exist: {resolved_project_root}"
         )
 
-    if not prompt.strip():
+    if not task.prompt.strip():
         raise ValueError("Builder prompt must not be empty.")
 
     file_arguments: list[str] = []
 
-    for file_path in files:
+    for file_path in task.files:
         absolute_path = (
             file_path
             if file_path.is_absolute()
@@ -75,13 +145,15 @@ def run_builder(
         "aider",
         "--model",
         "openai/qwen3-coder:latest",
+        "--edit-format",
+        "diff",
         "--no-show-model-warnings",
         "--no-pretty",
         "--no-stream",
         "--yes-always",
         "--no-auto-commits",
         "--message",
-        prompt,
+        task.prompt,
         *file_arguments,
     ]
 
@@ -113,78 +185,26 @@ def run_builder(
             return_code=124,
             stdout=stdout,
             stderr=f"{stderr}\nBuilder timed out.".strip(),
+            has_changes=False,
+            status=BuilderStatus.TIMEOUT,
         )
 
+    # Determine if files have changed
+    has_changes = builder_task_has_changes(
+        task=task,
+        project_root=resolved_project_root,
+    )
+    
+    # Determine the status based on return code and changes
+    if completed.returncode == 0:
+        status = BuilderStatus.SUCCESS if has_changes else BuilderStatus.NO_CHANGES
+    else:
+        status = BuilderStatus.FAILED
+    
     return BuilderResult(
         return_code=completed.returncode,
         stdout=completed.stdout,
         stderr=completed.stderr,
+        has_changes=has_changes,
+        status=status,
     )
-
-
-def main() -> int:
-    project_root = Path.cwd()
-
-    prompt = """
-Goal
-
-Add one isolated helper that detects removed public symbols.
-
-Files available to you
-
-- api_guard.py
-- test_api_guard.py
-
-Files allowed to modify
-
-- api_guard.py
-- test_api_guard.py
-
-Requirements
-
-- Add:
-  detect_removed_public_symbols(
-      before_source: str,
-      after_source: str,
-  ) -> set[str]
-
-- Reuse extract_public_symbols() and compare_symbol_sets().
-- Return only removed symbols.
-- Add focused tests.
-
-Restrictions
-
-- Do not modify existing functions.
-- Do not modify existing tests.
-- Only append new code.
-- Do not refactor unrelated code.
-- Do not commit or push.
-
-Verification
-
-python3 -m pytest -q
-python3 -m py_compile api_guard.py
-git --no-pager diff --check
-""".strip()
-
-    result = run_builder(
-        prompt=prompt,
-        files=[
-            Path("api_guard.py"),
-            Path("test_api_guard.py"),
-        ],
-        project_root=project_root,
-        timeout_seconds=15 * 60,
-    )
-
-    if result.stdout:
-        print(result.stdout)
-
-    if result.stderr:
-        print(result.stderr)
-
-    return result.return_code
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
