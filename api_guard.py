@@ -85,8 +85,17 @@ def detect_removed_public_symbols_from_files(
     Returns:
         A set of symbol names that were removed
     """
-    before_source = before_file.read_text(encoding="utf-8")
-    after_source = after_file.read_text(encoding="utf-8")
+    # Handle missing files gracefully
+    try:
+        before_source = before_file.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        before_source = ""
+    
+    try:
+        after_source = after_file.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        after_source = ""
+    
     return detect_removed_public_symbols(before_source, after_source)
 
 

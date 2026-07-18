@@ -13,6 +13,10 @@ from git_tools import (changed_files, detect_protected_changes, git_checkpoint, 
 from ollama_workflow import create_next_block, review_block
 from orchestrator_runtime import load_json, save_json
 from preflight import run_preflight
+from approvals import ArchitectureApprovalRequired, require_architecture_approval
+from artifacts import ArtifactStore, CycleIdentity, Historian, current_commit
+from role_system import ModelManager, ModelRegistry, Role, RoleRunner
+from librarian import build_repo_map
 
 NIGHTSHIFT_ROOT = Path(__file__).resolve().parent
 CONFIG_PATH = NIGHTSHIFT_ROOT / "config.json"
@@ -90,7 +94,14 @@ def main() -> int:
 
     max_blocks = int(config.get("max_blocks", 8))
     max_attempts = int(config.get("max_attempts_per_block", 3))
-    model = config["model"]
+    registry = ModelRegistry.from_config(config)
+    model_manager = ModelManager()
+    role_runner = RoleRunner(registry, model_manager)
+    historian = Historian()
+    feature_id = str(config.get("feature_id", "nightshift-self-development"))
+    task_id = str(config.get("task_id", TASK_PATH.stem))
+    nightshift_version = str(config.get("nightshift_version", "0.3.0"))
+    artifact_root = NIGHTSHIFT_ROOT / str(config.get("artifact_directory", "history"))
 
     # Create a checkpoint before starting
     try:
@@ -100,11 +111,14 @@ def main() -> int:
         return 1
 
     for block_number in range(1, max_blocks + 1):
-        plan = create_next_block(
-            model=model,
-            task=task,
-            state=state,
-            project_snapshot=git_status(project_root) or "Working tree is clean.",
+        plan = role_runner.run(
+            Role.PLANNER,
+            lambda profile: create_next_block(
+                model=profile.model,
+                task=task,
+                state=state,
+                project_snapshot=git_status(project_root) or "Working tree is clean.",
+            ),
         )
 
         if plan["complete"]:
@@ -122,13 +136,58 @@ def main() -> int:
         block_id = block["id"]
         previous_review: dict[str, Any] | None = None
 
-        architecture_contract = create_architecture_contract(
-            model=model,
-            task=task,
-            block=block,
-            project_snapshot=git_status(project_root) or "Working tree is clean.",
-            config=config,
+        cycle_identity = CycleIdentity(
+            feature_id=feature_id,
+            task_id=task_id,
+            cycle_id=f"{block_number:03d}-{block_id}",
+            nightshift_version=nightshift_version,
+            commit=current_commit(project_root),
         )
+        artifacts = ArtifactStore(artifact_root, cycle_identity)
+        artifacts.write_json("planner.json", plan)
+        repo_map = role_runner.run(
+            Role.LIBRARIAN,
+            lambda _profile: build_repo_map(
+                project_root,
+                candidate_files=block.get("files", []),
+                max_files=int(config.get("max_repo_map_files", 200)),
+            ),
+        )
+        artifacts.write_text("repo_map.txt", repo_map + "\n")
+
+        architecture_contract = role_runner.run(
+            Role.ARCHITECT,
+            lambda profile: create_architecture_contract(
+                model=profile.model,
+                task=task,
+                block=block,
+                project_snapshot=(
+                    (git_status(project_root) or "Working tree is clean.")
+                    + "\n\nREPOSITORY MAP:\n"
+                    + repo_map
+                ),
+                config=config,
+            ),
+        )
+        artifacts.write_json("architecture_contract.json", architecture_contract.to_dict())
+
+        try:
+            approval = require_architecture_approval(
+                contract=architecture_contract,
+                directory=artifacts.root,
+                policy=str(config.get("architecture_approval_policy", "auto")),
+            )
+        except ArchitectureApprovalRequired as error:
+            state["status"] = "awaiting_architecture_approval"
+            state["pending_contract"] = str(error.contract_path)
+            save_json(STATE_PATH, state)
+            print(f"\n{error}")
+            return 4
+        artifacts.write_json("architecture_approval.json", {
+            "contract_id": approval.contract_id,
+            "decision": approval.decision.value,
+            "comment": approval.comment,
+        })
 
         print(
             f"\n=== Block {block_number}: "
@@ -156,9 +215,12 @@ def main() -> int:
                 architecture_contract=architecture_contract,
             )
 
+            builder_config = dict(config)
+            builder_config["aider_model"] = registry.profile_for(Role.BUILDER).model
+            role_runner.run(Role.BUILDER, lambda _profile: None)
             aider_result = run_aider(
                 project_root=project_root,
-                config=config,
+                config=builder_config,
                 prompt=prompt,
                 block=block,
                 architecture_contract=architecture_contract,
@@ -187,8 +249,10 @@ def main() -> int:
             # Get only changes introduced by this specific block
             block_local_changes = git_get_changes_since_commit(project_root, block_checkpoint)
 
-            review = review_block(
-                model=model,
+            review = role_runner.run(
+                Role.REVIEWER,
+                lambda profile: review_block(
+                model=profile.model,
                 task=task,
                 block=block,
                 diff=block_diff,
@@ -196,6 +260,7 @@ def main() -> int:
                 protected_violations=protected_violations,
                 architecture_contract=architecture_contract,
                 contract_violations=architecture_violations,
+                ),
             )
 
             deterministic_pass = (
@@ -226,6 +291,14 @@ def main() -> int:
             }
 
             write_report(block_id, attempt, report)
+            artifacts.write_json(f"builder-attempt-{attempt}.json", {
+                "return_code": aider_result.return_code,
+                "passed": aider_result.passed,
+                "changed_files": files,
+                "newly_changed_files": newly_changed,
+            })
+            artifacts.write_json(f"tests-attempt-{attempt}.json", verification)
+            artifacts.write_json(f"review-attempt-{attempt}.json", review)
 
             if approved:
                 state["completed_blocks"].append(
@@ -239,6 +312,14 @@ def main() -> int:
                 )
                 save_json(STATE_PATH, state)
 
+                historian.record_retrospective(
+                    store=artifacts,
+                    approved=True,
+                    attempts=attempt,
+                    review=review,
+                    verification=verification,
+                    contract_violations=architecture_violations,
+                )
                 print(f"\nBlock {block_id} approved.", flush=True)
                 block_approved = True
                 break
@@ -258,6 +339,14 @@ def main() -> int:
 
         # If all attempts for this block failed, restore to initial state
         if not block_approved:
+            historian.record_retrospective(
+                store=artifacts,
+                approved=False,
+                attempts=max_attempts,
+                review=previous_review or {},
+                verification=verification,
+                contract_violations=architecture_violations,
+            )
             try:
                 git_restore_checkpoint(project_root, initial_checkpoint)
             except RuntimeError as e:

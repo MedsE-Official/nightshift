@@ -11,42 +11,27 @@ from planner import Planner
 
 
 PROMPT = """
-Analyze the current Nightshift architecture and implement exactly one small,
-high-value refactoring that improves separation of responsibilities without
-changing external behavior.
+The fix prevents the crash but hides all API Guard failures.
 
-Requirements:
+Do not suppress all exceptions.
 
-- Select exactly one narrowly scoped refactoring.
-- The Architect must create and validate an Architecture Contract before the
-  Builder is invoked.
-- The Builder must implement only the validated Architecture Contract.
-- Preserve existing public APIs and behavior.
-- Do not add dependencies.
-- Do not perform unrelated cleanup.
-- Add or update focused tests when needed.
-- Run the complete test suite.
-- Do not commit, push, merge, rebase, or reset Git history.
+Instead:
+
+- identify why before.py and after.py do not exist
+- create the snapshots before API Guard executes
+- or explicitly skip only when snapshots are unavailable
+
+Preserve API Guard's ability to detect genuine API regressions.
+
+Add a regression test that reproduces the original FileNotFoundError.
 """.strip()
 
 
 FILES = (
-    Path("architect.py"),
-    Path("contracts.py"),
-    Path("planner.py"),
-    Path("backlog.py"),
-    Path("builder.py"),
+    Path("api_guard.py"),
     Path("review.py"),
-    Path("orchestrator.py"),
-    Path("orchestrator_runtime.py"),
-    Path("autonomous_orchestrator.py"),
-    Path("cycle_execution.py"),
-    Path("git_tools.py"),
-    Path("ollama_workflow.py"),
-    Path("aider_workflow.py"),
-    Path("test_architect.py"),
-    Path("test_contracts.py"),
-    Path("test_role_handoffs.py"),
+    Path("test_api_guard.py"),
+    Path("test_review.py"),
 )
 
 
