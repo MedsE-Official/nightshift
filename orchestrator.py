@@ -743,6 +743,49 @@ from review import ReviewResult, run_review
 from test_runner import ExecutionResult, run_tests
 
 
+def execute_all_tasks(
+    *,
+    planner: Planner,
+    project_root: Path,
+    config: dict[str, Any],
+) -> tuple[CycleResult, ...]:
+    """Execute all tasks from the planner sequentially until no tasks remain."""
+    results = []
+    
+    while True:
+        cycle_result = execute_next_task(
+            planner=planner,
+            project_root=project_root,
+            config=config,
+        )
+        
+        if cycle_result is None:
+            break
+            
+        results.append(cycle_result)
+    
+    return tuple(results)
+
+
+def execute_next_task(
+    *,
+    planner: Planner,
+    project_root: Path,
+    config: dict[str, Any],
+) -> CycleResult | None:
+    """Execute the next task from the planner if one exists."""
+    builder_task = planner.next_builder_task()
+    
+    if builder_task is None:
+        return None
+    
+    return execute_cycle(
+        task=builder_task,
+        project_root=project_root,
+        config=config,
+    )
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Run Nightshift against a Git repository."

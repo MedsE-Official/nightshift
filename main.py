@@ -5,45 +5,59 @@ from builder import BuilderTask, run_builder
 
 
 PROMPT = """
-Task 2.5.1 – Introduce execute_cycle()
+Task 3.0.2 – Execute all tasks from Planner
 
-Implement a minimal execute_cycle() function.
+Goal
+
+Add a small orchestration helper that executes Planner tasks sequentially until no tasks remain.
 
 Modify only:
 
 - orchestrator.py
 - test_orchestrator.py
 
-Requirements:
+Requirements
 
-- Add execute_cycle().
-- Accept:
-    planner,
-    project_root,
-    config.
-- Ask the planner for exactly one BuilderTask.
-- If no BuilderTask exists, return None.
-- Call run_builder() exactly once.
-- Call run_tests() exactly once.
-- Call run_review() exactly once.
-- Return a CycleResult containing:
-    builder_result,
-    test_result,
-    review_result.
+1. Add this function to orchestrator.py:
 
-Constraints:
+    execute_all_tasks(
+        *,
+        planner: Planner,
+        project_root: Path,
+        config: dict[str, Any],
+    ) -> tuple[CycleResult, ...]
 
-- Do not modify main().
-- Do not move existing logic.
-- Do not implement retries.
-- Do not update state.
-- Do not create reports.
-- Do not capture Git diffs.
-- Do not perform checkpointing.
-- Do not change Builder, Review or TestRunner APIs.
-- Add only the tests required for execute_cycle().
-- Preserve all existing behaviour.
-- Do not commit or push.
+2. execute_all_tasks() must repeatedly call:
+
+    execute_next_task(
+        planner=planner,
+        project_root=project_root,
+        config=config,
+    )
+
+3. When execute_next_task() returns None, execution must stop.
+
+4. Return all produced CycleResult objects as a tuple, preserving execution order.
+
+5. If the Planner contains no tasks, return an empty tuple.
+
+6. Do not catch or suppress exceptions from execute_next_task().
+
+7. Add focused unit tests for:
+
+    - an empty Planner
+    - multiple CycleResult objects returned in order
+    - stopping immediately after execute_next_task() returns None
+
+8. Do not modify the existing main() function.
+9. Do not remove or move existing orchestration code.
+10. Do not modify Planner, Builder, Review, or prompts.
+11. Do not perform unrelated cleanup.
+12. Do not commit or push.
+
+Run:
+
+    pytest -q
 """.strip()
 
 FILES = [
