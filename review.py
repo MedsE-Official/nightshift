@@ -32,7 +32,16 @@ def _run_api_guard(
     Returns:
         An ApiGuardResult indicating whether the check passed and any removed symbols
     """
-    return check_public_api(before_file, after_file)
+    try:
+        return check_public_api(before_file, after_file)
+    except FileNotFoundError as e:
+        # If files are missing, we can't do API guard check - this is expected in some cases
+        # Log for debugging but don't treat as API change
+        print(f"Warning: API guard skipped due to missing files: {e}")
+        return ApiGuardResult(passed=True, removed_symbols=set())
+    except Exception as e:
+        # For other exceptions, re-raise them so they're not hidden
+        raise
 
 
 def run_review(

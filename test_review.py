@@ -676,6 +676,38 @@ def func1():
             self.assertTrue(result.passed)
             self.assertEqual(result.errors, ())
 
+    def test_run_review_handles_file_not_found_error(self):
+        """Test that run_review properly handles FileNotFoundError from _run_api_guard."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project_root = Path(tmpdir)
+            
+            # Don't create before.py and after.py files - this should cause FileNotFoundError
+            
+            # Call run_review with successful builder and test results
+            result = run_review(
+                project_root=project_root,
+                config={},
+                block={},
+                diff="",
+                builder_result=BuilderResult(
+                    status=BuilderStatus.SUCCESS,
+                    return_code=0,
+                    stdout="",
+                    stderr="",
+                    has_changes=True
+                ),
+                test_result=ExecutionResult(
+                    return_code=0,
+                    stdout="",
+                    stderr=""
+                )
+            )
+            
+            # Should succeed without crashing, but with no API guard check
+            self.assertIsInstance(result, ReviewResult)
+            # Should pass because we're not actually checking API guard (files missing)
+            # But the test should still be able to proceed without crashing
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -1,4 +1,3 @@
-
 {
   "model": "qwen3-coder:latest",
   "aider_model": "openai/qwen3-coder:latest",
@@ -17,5 +16,52 @@
     ".git",
     ".venv",
     "__pycache__"
-  ]
+  ],
+  "nightshift_version": "0.3.0",
+  "feature_id": "nightshift-self-development",
+  "task_id": "task",
+  "artifact_directory": "history",
+  "architecture_approval_policy": "file",
+  "roles": {
+    "planner": {
+      "provider": "ollama",
+      "model": "qwen3-coder:latest",
+      "context_policy": "isolated",
+      "output_schema": "plan"
+    },
+    "architect": {
+      "provider": "ollama",
+      "model": "qwen3-coder:latest",
+      "context_policy": "isolated",
+      "output_schema": "architecture_contract"
+    },
+    "builder": {
+      "provider": "ollama",
+      "model": "openai/qwen3-coder:latest",
+      "context_policy": "contract_only",
+      "permissions": [
+        "read_allowed_files",
+        "modify_allowed_files"
+      ],
+      "output_schema": "implementation_result"
+    },
+    "reviewer": {
+      "provider": "ollama",
+      "model": "qwen3-coder:latest",
+      "context_policy": "independent",
+      "output_schema": "review_report"
+    },
+    "historian": {
+      "provider": "local",
+      "model": "deterministic",
+      "context_policy": "artifacts_only",
+      "output_schema": "retrospective"
+    },
+    "librarian": {
+      "provider": "local",
+      "model": "deterministic",
+      "context_policy": "repository_only",
+      "output_schema": "repo_map"
+    }
+  }
 }

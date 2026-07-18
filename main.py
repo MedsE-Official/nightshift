@@ -1,49 +1,110 @@
+from __future__ import annotations
 
+import json
+from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
-from builder import BuilderTask, run_builder
+from backlog import Backlog, Feature, Task, TaskStatus
+from orchestrator import execute_next_task
+from planner import Planner
 
 
 PROMPT = """
-Refactor Planner to consume a Backlog instance instead of reading directly from a file.
+The fix prevents the crash but hides all API Guard failures.
 
-Requirements:
-- Modify only planner.py and test_planner.py.
-- Planner shall accept a Backlog object.
-- Do not change the Backlog model.
-- Preserve existing planner behavior.
-- Update existing tests as needed.
-- Do not modify orchestrator.py or other files.
-- Do not add new functionality beyond consuming Backlog.
+Do not suppress all exceptions.
+
+Instead:
+
+- identify why before.py and after.py do not exist
+- create the snapshots before API Guard executes
+- or explicitly skip only when snapshots are unavailable
+
+Preserve API Guard's ability to detect genuine API regressions.
+
+Add a regression test that reproduces the original FileNotFoundError.
 """.strip()
 
-FILES = [
-    Path("planner.py"),
-    Path("test_planner.py"),
-    Path("backlog.py"),
-]
+
+FILES = (
+    Path("api_guard.py"),
+    Path("review.py"),
+    Path("test_api_guard.py"),
+    Path("test_review.py"),
+)
+
+
+def load_config(path: Path) -> dict[str, Any]:
+    with path.open("r", encoding="utf-8") as file:
+        value = json.load(file)
+
+    if not isinstance(value, dict):
+        raise ValueError("config.json must contain a JSON object")
+
+    return value
+
+
+def create_backlog() -> Backlog:
+    now = datetime.now(timezone.utc)
+
+    task = Task(
+        id="nightshift-self-refactor-001",
+        title="Improve Nightshift architecture",
+        prompt=PROMPT,
+        files=FILES,
+        status=TaskStatus.PENDING,
+        created_at=now,
+        updated_at=now,
+    )
+
+    feature = Feature(
+        id="nightshift-self-development",
+        title="Nightshift self-development",
+        tasks=(task,),
+    )
+
+    return Backlog(features=(feature,))
 
 
 def main() -> int:
+    project_root = Path.cwd()
+    config = load_config(project_root / "config.json")
+    planner = Planner(create_backlog())
 
-    task = BuilderTask(
-        prompt=PROMPT,
-        files=tuple(FILES),
+    result = execute_next_task(
+        planner=planner,
+        project_root=project_root,
+        config=config,
     )
 
-    result = run_builder(
-        task=task,
-        project_root=Path.cwd(),
-        timeout_seconds=15 * 60,
-    )
+    if result is None:
+        print("No task was available.")
+        return 0
 
-    if result.stdout:
-        print(result.stdout)
+    approved = getattr(result, "approved", None)
 
-    if result.stderr:
-        print(result.stderr)
+    if approved is True:
+        print("Nightshift cycle completed and was approved.")
+        return 0
 
-    return result.return_code
+    if approved is False:
+        print("Nightshift cycle completed but was not approved.")
+        return 1
+
+    review_result = getattr(result, "review_result", None)
+    review_approved = getattr(review_result, "approved", None)
+
+    if review_approved is True:
+        print("Nightshift cycle completed and the review was approved.")
+        return 0
+
+    if review_approved is False:
+        print("Nightshift cycle completed but the review was not approved.")
+        return 1
+
+    print("Nightshift cycle completed.")
+    return 0
 
 
 if __name__ == "__main__":
