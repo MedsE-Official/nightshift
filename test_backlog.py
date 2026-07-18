@@ -204,3 +204,8 @@ def test_backlog_rejects_malformed_json(tmp_path):
 
     with pytest.raises(json.JSONDecodeError):
         Backlog.from_json_file(path)
+
+
+def test_backlog_from_dict_loads_domain_model_without_file_io():
+    backlog = Backlog.from_dict(backlog_data(task_data()))
+    assert backlog.tasks[0].id == "task-1"

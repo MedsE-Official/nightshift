@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from configuration import Configuration
+
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -82,12 +84,14 @@ def execute_all_tasks(
 
 def execute_backlog(
     *,
-    backlog_file: Path,
+    configuration: Configuration,
     project_root: Path,
     config: dict[str, Any],
 ) -> tuple[CycleResult, ...]:
+    """Execute the validated project backlog from Configuration."""
+
     return execute_all_tasks(
-        planner=Planner.from_backlog(backlog_file),
+        planner=Planner.from_configuration(configuration),
         project_root=project_root,
         config=config,
     )

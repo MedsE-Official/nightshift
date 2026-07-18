@@ -158,3 +158,37 @@ def test_from_backlog_loads_real_json_file(tmp_path):
         prompt="Implement task 1",
         files=(Path("task.py"),),
     )
+
+
+def test_from_configuration_uses_validated_backlog_data():
+    from types import SimpleNamespace
+
+    configuration = SimpleNamespace(
+        backlog={
+            "features": [
+                {
+                    "id": "feature-1",
+                    "title": "Feature 1",
+                    "tasks": [
+                        {
+                            "id": "task-1",
+                            "title": "Task 1",
+                            "prompt": "Implement task 1",
+                            "files": ["task.py"],
+                            "status": "pending",
+                            "created_at": "2023-01-01T00:00:00",
+                            "updated_at": "2023-01-01T00:00:00",
+                            "events": [],
+                        }
+                    ],
+                }
+            ]
+        }
+    )
+
+    planner = Planner.from_configuration(configuration)
+
+    assert planner.next_builder_task() == BuilderTask(
+        prompt="Implement task 1",
+        files=(Path("task.py"),),
+    )

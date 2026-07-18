@@ -1,7 +1,13 @@
+from __future__ import annotations
+
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from backlog import Backlog, Task
 from builder import BuilderTask
+
+if TYPE_CHECKING:
+    from configuration import Configuration
 
 
 class Planner:
@@ -9,6 +15,12 @@ class Planner:
         self._tasks = backlog.tasks
         self._index = 0
         self._current_task: Task | None = None
+
+    @classmethod
+    def from_configuration(cls, configuration: "Configuration") -> "Planner":
+        """Create a planner from validated project data."""
+
+        return cls(Backlog.from_dict(configuration.backlog))
 
     @classmethod
     def from_backlog(cls, backlog_file: Path) -> "Planner":

@@ -49,9 +49,8 @@ class Backlog:
     features: tuple[Feature, ...]
 
     @classmethod
-    def from_json_file(cls, path: Path) -> "Backlog":
-        with path.open("r", encoding="utf-8") as file:
-            data = json.load(file)
+    def from_dict(cls, data: dict[str, Any]) -> "Backlog":
+        """Build the domain backlog from already loaded project data."""
 
         if not isinstance(data, dict):
             raise ValueError("Top-level JSON value must be an object")
@@ -65,6 +64,13 @@ class Backlog:
             for feature_index, feature_data in enumerate(features_data)
         )
         return cls(features=features)
+
+    @classmethod
+    def from_json_file(cls, path: Path) -> "Backlog":
+        with path.open("r", encoding="utf-8") as file:
+            data = json.load(file)
+
+        return cls.from_dict(data)
 
     @property
     def tasks(self) -> tuple[Task, ...]:
