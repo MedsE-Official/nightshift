@@ -5,59 +5,19 @@ from builder import BuilderTask, run_builder
 
 
 PROMPT = """
-Task 3.0.2 – Execute all tasks from Planner
+Add unit tests for execute_backlog().
 
-Goal
-
-Add a small orchestration helper that executes Planner tasks sequentially until no tasks remain.
-
-Modify only:
-
-- orchestrator.py
-- test_orchestrator.py
-
-Requirements
-
-1. Add this function to orchestrator.py:
-
-    execute_all_tasks(
-        *,
-        planner: Planner,
-        project_root: Path,
-        config: dict[str, Any],
-    ) -> tuple[CycleResult, ...]
-
-2. execute_all_tasks() must repeatedly call:
-
-    execute_next_task(
-        planner=planner,
-        project_root=project_root,
-        config=config,
-    )
-
-3. When execute_next_task() returns None, execution must stop.
-
-4. Return all produced CycleResult objects as a tuple, preserving execution order.
-
-5. If the Planner contains no tasks, return an empty tuple.
-
-6. Do not catch or suppress exceptions from execute_next_task().
-
-7. Add focused unit tests for:
-
-    - an empty Planner
-    - multiple CycleResult objects returned in order
-    - stopping immediately after execute_next_task() returns None
-
-8. Do not modify the existing main() function.
-9. Do not remove or move existing orchestration code.
-10. Do not modify Planner, Builder, Review, or prompts.
-11. Do not perform unrelated cleanup.
-12. Do not commit or push.
-
-Run:
-
-    pytest -q
+Requirements:
+- Add tests only to test_orchestrator.py.
+- Do not modify orchestrator.py.
+- Verify that Planner.from_backlog() is called exactly once with the supplied backlog_file.
+- Verify that execute_all_tasks() is called exactly once with:
+  - the planner returned by Planner.from_backlog()
+  - the supplied project_root
+  - the supplied config
+- Verify that execute_backlog() returns the tuple returned by execute_all_tasks() unchanged.
+- Do not modify existing tests.
+- Do not perform any refactoring.
 """.strip()
 
 FILES = [

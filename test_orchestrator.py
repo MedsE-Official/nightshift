@@ -444,5 +444,34 @@ class TestOrchestrator(unittest.TestCase):
             # Verify next_builder_task was called twice (once for each task, once for None)
             self.assertEqual(mock_planner.next_builder_task.call_count, 2)
 
+    def test_execute_backlog_delegates_to_execute_all_tasks(self):
+        backlog_file = Path("backlog.md")
+        project_root = Path(".")
+        config = {"timeout_minutes_per_aider_run": 1}
+
+        mock_planner = MagicMock()
+        mock_results = (MagicMock(), MagicMock())
+
+        with patch(
+            "orchestrator.Planner.from_backlog",
+            return_value=mock_planner,
+        ) as mock_from_backlog, patch(
+            "orchestrator.execute_all_tasks",
+            return_value=mock_results,
+        ) as mock_execute_all_tasks:
+            result = orchestrator.execute_backlog(
+                backlog_file=backlog_file,
+                project_root=project_root,
+                config=config,
+            )
+
+        mock_from_backlog.assert_called_once_with(backlog_file)
+        mock_execute_all_tasks.assert_called_once_with(
+            planner=mock_planner,
+            project_root=project_root,
+            config=config,
+        )
+        self.assertIs(result, mock_results)
+
 if __name__ == '__main__':
     unittest.main()

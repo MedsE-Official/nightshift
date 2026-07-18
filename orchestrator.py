@@ -767,6 +767,22 @@ def execute_all_tasks(
     return tuple(results)
 
 
+def execute_backlog(
+    *,
+    backlog_file: Path,
+    project_root: Path,
+    config: dict[str, Any],
+) -> tuple[CycleResult, ...]:
+    """Execute tasks from a backlog file."""
+    planner = Planner.from_backlog(backlog_file)
+
+    return execute_all_tasks(
+        planner=planner,
+        project_root=project_root,
+        config=config,
+    )
+
+
 def execute_next_task(
     *,
     planner: Planner,
