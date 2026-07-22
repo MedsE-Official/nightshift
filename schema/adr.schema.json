@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nightshift.local/schema/adr.schema.json",
+  "title": "Nightshift Architecture Decisions",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "decisions"],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "decisions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/decision"
+      }
+    }
+  },
+  "$defs": {
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "status",
+        "context",
+        "decision",
+        "consequences"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^ADR-[0-9]{3,}$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "type": "string",
+          "enum": ["proposed", "accepted", "deprecated", "superseded"]
+        },
+        "context": {
+          "type": "string",
+          "minLength": 1
+        },
+        "decision": {
+          "type": "string",
+          "minLength": 1
+        },
+        "consequences": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "supersedes": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string",
+            "pattern": "^ADR-[0-9]{3,}$"
+          },
+          "uniqueItems": true
+        }
+      }
+    }
+  }
+}

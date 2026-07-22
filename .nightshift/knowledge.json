@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0",
+  "scope": "project",
+  "entries": [
+    {
+      "id": "architecture-source-of-truth",
+      "title": "JSON is the machine source of truth",
+      "content": "All project control documents consumed by Nightshift are JSON. Human-readable documentation is generated from JSON and is not authoritative.",
+      "tags": [
+        "planner",
+        "builder",
+        "reviewer",
+        "architect"
+      ]
+    },
+    {
+      "id": "architecture-knowledge-scopes",
+      "title": "Two knowledge scopes",
+      "content": "Reusable framework knowledge belongs to the Nightshift repository. Project-specific knowledge belongs to the target repository under .nightshift.",
+      "tags": [
+        "planner",
+        "architect"
+      ]
+    },
+    {
+      "id": "architecture-simplicity",
+      "title": "Simplicity first",
+      "content": "Prefer small composable changes, readable code, and concrete needs over speculative abstractions.",
+      "tags": [
+        "planner",
+        "builder",
+        "reviewer",
+        "architect"
+      ]
+    }
+  ]
+}

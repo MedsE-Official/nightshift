@@ -446,33 +446,81 @@ class TestOrchestrator(unittest.TestCase):
             self.assertEqual(mock_planner.next_builder_task.call_count, 2)
 
     def test_execute_backlog_delegates_to_execute_all_tasks(self):
-        backlog_file = Path("backlog.md")
+        configuration = MagicMock()
         project_root = Path(".")
         config = {"timeout_minutes_per_aider_run": 1}
-
         mock_planner = MagicMock()
         mock_results = (MagicMock(), MagicMock())
 
         with patch(
-            "cycle_execution.Planner.from_backlog",
+            "cycle_execution.Planner.from_configuration",
             return_value=mock_planner,
-        ) as mock_from_backlog, patch(
+        ) as mock_from_configuration, patch(
             "cycle_execution.execute_all_tasks",
             return_value=mock_results,
         ) as mock_execute_all_tasks:
-            result = orchestrator.execute_backlog(
-                backlog_file=backlog_file,
+            results = cycle_execution.execute_backlog(
+                configuration=configuration,
                 project_root=project_root,
                 config=config,
             )
 
-        mock_from_backlog.assert_called_once_with(backlog_file)
+        mock_from_configuration.assert_called_once_with(configuration)
         mock_execute_all_tasks.assert_called_once_with(
             planner=mock_planner,
             project_root=project_root,
             config=config,
         )
-        self.assertIs(result, mock_results)
+        self.assertEqual(results, mock_results)
 
-if __name__ == '__main__':
-    unittest.main()
+
+def test_execute_next_task_marks_approved_task_done():
+    from types import SimpleNamespace
+    from unittest.mock import Mock, patch
+    import cycle_execution
+    from builder import BuilderTask
+
+    planner = Mock()
+    planner.next_builder_task.return_value = BuilderTask(
+        prompt="Do work", files=(Path("file.py"),)
+    )
+    planner.configuration = SimpleNamespace()
+    approved_result = SimpleNamespace(
+        review_result=SimpleNamespace(passed=True)
+    )
+
+    with patch("cycle_execution.execute_cycle", return_value=approved_result):
+        result = cycle_execution.execute_next_task(
+            planner=planner,
+            configuration=SimpleNamespace(),
+            config={},
+        )
+
+    assert result is approved_result
+    planner.complete_current_task.assert_called_once_with()
+
+
+def test_execute_next_task_does_not_complete_rejected_task():
+    from types import SimpleNamespace
+    from unittest.mock import Mock, patch
+    import cycle_execution
+    from builder import BuilderTask
+
+    planner = Mock()
+    planner.next_builder_task.return_value = BuilderTask(
+        prompt="Do work", files=(Path("file.py"),)
+    )
+    planner.configuration = SimpleNamespace()
+    rejected_result = SimpleNamespace(
+        review_result=SimpleNamespace(passed=False)
+    )
+
+    with patch("cycle_execution.execute_cycle", return_value=rejected_result):
+        result = cycle_execution.execute_next_task(
+            planner=planner,
+            configuration=SimpleNamespace(),
+            config={},
+        )
+
+    assert result is rejected_result
+    planner.complete_current_task.assert_not_called()

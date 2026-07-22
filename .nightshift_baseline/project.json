@@ -1,0 +1,6 @@
+{
+  "name": "calculator",
+  "language": "python",
+  "test_command": "python -m pytest",
+  "timeout_minutes_per_aider_run": 10
+}
