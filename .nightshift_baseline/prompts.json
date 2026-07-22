@@ -1,0 +1,4 @@
+{
+  "builder": "Implement only the selected backlog task. Keep the solution minimal. Do not implement future backlog tasks. Add or update tests for the current behavior. Do not modify files outside the external project root.",
+  "reviewer": "Review the implementation against the selected backlog task. Check correctness, scope, tests, error handling, unnecessary complexity, and accidental implementation of future tasks. Approve only when the task is complete and all tests pass."
+}

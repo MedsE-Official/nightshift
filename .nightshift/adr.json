@@ -1,5 +1,4 @@
 {
-  "$schema": "../schema/adr.schema.json",
   "schema_version": "1.0",
   "decisions": [
     {

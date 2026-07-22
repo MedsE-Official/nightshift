@@ -31,6 +31,7 @@ class ProjectData:
     backlog: dict[str, Any]
     knowledge: dict[str, Any]
     adr: dict[str, Any]
+    prompts: dict[str, Any]
 
 
 class ProjectLoader:
@@ -41,6 +42,7 @@ class ProjectLoader:
         "backlog": ("backlog_file", "backlog.schema.json"),
         "knowledge": ("knowledge_file", "knowledge.schema.json"),
         "adr": ("adr_file", "adr.schema.json"),
+        "prompts": ("prompts_file", "prompts.schema.json"),
     }
 
     def __init__(

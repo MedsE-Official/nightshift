@@ -17,6 +17,15 @@ VALID_DOCUMENTS = {
         "entries": [],
     },
     "adr.json": {"schema_version": "1.0", "decisions": []},
+    "prompts.json": {
+        "schema_version": "1.0",
+        "prompts": {
+            "planner": "Plan.",
+            "builder": "Build.",
+            "reviewer": "Review.",
+            "architect": "Design.",
+        },
+    },
 }
 
 

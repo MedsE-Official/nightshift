@@ -32,7 +32,7 @@ def main() -> int:
 
     result = execute_next_task(
         planner=planner,
-        project_root=project_root,
+        configuration=configuration,
         config=runtime_config,
     )
 

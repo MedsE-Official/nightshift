@@ -1,0 +1,72 @@
+[
+  {
+    "id": "CALC-001",
+    "title": "Project structure",
+    "status": "pending",
+    "priority": "high",
+    "description": "Create the initial Python project structure with pyproject.toml, src, tests and CLI entry point."
+  },
+  {
+    "id": "CALC-002",
+    "title": "Basic expression parser",
+    "status": "pending",
+    "priority": "high",
+    "description": "Implement parsing and evaluation of +, -, * and / expressions."
+  },
+  {
+    "id": "CALC-003",
+    "title": "Error handling",
+    "status": "pending",
+    "priority": "high",
+    "description": "Handle division by zero, invalid expressions and display user-friendly error messages."
+  },
+  {
+    "id": "CALC-004",
+    "title": "Operator precedence",
+    "status": "pending",
+    "priority": "medium",
+    "description": "Support parentheses and correct operator precedence."
+  },
+  {
+    "id": "CALC-005",
+    "title": "Calculation history",
+    "status": "pending",
+    "priority": "medium",
+    "description": "Store previous calculations and implement the history command."
+  },
+  {
+    "id": "CALC-006",
+    "title": "Memory functions",
+    "status": "pending",
+    "priority": "medium",
+    "description": "Implement M+, M-, MR and MC commands."
+  },
+  {
+    "id": "CALC-007",
+    "title": "CLI improvements",
+    "status": "pending",
+    "priority": "low",
+    "description": "Implement help, clear and exit commands."
+  },
+  {
+    "id": "CALC-008",
+    "title": "Testing",
+    "status": "pending",
+    "priority": "high",
+    "description": "Add unit tests, edge case tests and integration tests."
+  },
+  {
+    "id": "CALC-009",
+    "title": "Documentation",
+    "status": "pending",
+    "priority": "low",
+    "description": "Write README with installation and usage examples."
+  },
+  {
+    "id": "CALC-010",
+    "title": "Release 1.0",
+    "status": "pending",
+    "priority": "low",
+    "description": "Ensure all tests pass and prepare the first release."
+  }
+]

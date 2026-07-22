@@ -472,3 +472,55 @@ class TestOrchestrator(unittest.TestCase):
             config=config,
         )
         self.assertEqual(results, mock_results)
+
+
+def test_execute_next_task_marks_approved_task_done():
+    from types import SimpleNamespace
+    from unittest.mock import Mock, patch
+    import cycle_execution
+    from builder import BuilderTask
+
+    planner = Mock()
+    planner.next_builder_task.return_value = BuilderTask(
+        prompt="Do work", files=(Path("file.py"),)
+    )
+    planner.configuration = SimpleNamespace()
+    approved_result = SimpleNamespace(
+        review_result=SimpleNamespace(passed=True)
+    )
+
+    with patch("cycle_execution.execute_cycle", return_value=approved_result):
+        result = cycle_execution.execute_next_task(
+            planner=planner,
+            configuration=SimpleNamespace(),
+            config={},
+        )
+
+    assert result is approved_result
+    planner.complete_current_task.assert_called_once_with()
+
+
+def test_execute_next_task_does_not_complete_rejected_task():
+    from types import SimpleNamespace
+    from unittest.mock import Mock, patch
+    import cycle_execution
+    from builder import BuilderTask
+
+    planner = Mock()
+    planner.next_builder_task.return_value = BuilderTask(
+        prompt="Do work", files=(Path("file.py"),)
+    )
+    planner.configuration = SimpleNamespace()
+    rejected_result = SimpleNamespace(
+        review_result=SimpleNamespace(passed=False)
+    )
+
+    with patch("cycle_execution.execute_cycle", return_value=rejected_result):
+        result = cycle_execution.execute_next_task(
+            planner=planner,
+            configuration=SimpleNamespace(),
+            config={},
+        )
+
+    assert result is rejected_result
+    planner.complete_current_task.assert_not_called()

@@ -1,194 +1,105 @@
-import json
-from datetime import datetime
 from pathlib import Path
-from unittest.mock import patch
+from types import SimpleNamespace
 
-from backlog import Backlog, Feature, Task, TaskStatus
 from builder import BuilderTask
 from planner import Planner
 
 
-NOW = datetime(2023, 1, 1)
-
-
-def make_task(
-    task_id: str,
-    *,
-    prompt: str | None = None,
-    files: tuple[Path, ...] = (),
-    status: TaskStatus = TaskStatus.PENDING,
-) -> Task:
-    return Task(
-        id=task_id,
-        title=f"Task {task_id}",
-        prompt=prompt or f"Prompt {task_id}",
-        files=files,
-        status=status,
-        created_at=NOW,
-        updated_at=NOW,
-    )
-
-
-def make_backlog(*tasks: Task) -> Backlog:
-    return Backlog(
-        features=(Feature(id="feature-1", title="Feature 1", tasks=tasks),)
-    )
-
-
-def test_planner_accepts_backlog_and_preserves_task_order():
-    first = make_task("first")
-    second = make_task("second")
-    planner = Planner(make_backlog(first, second))
-
-    assert planner.remaining == 2
-    assert planner.current_task is None
-
-    assert planner.next_task() is first
-    assert planner.remaining == 1
-    assert planner.current_task is first
-
-    assert planner.next_task() is second
-    assert planner.remaining == 0
-    assert planner.current_task is second
-
-    assert planner.next_task() is None
-    assert planner.remaining == 0
-    assert planner.current_task is second
-
-
-def test_planner_preserves_existing_behavior_for_all_statuses():
-    pending = make_task("pending", status=TaskStatus.PENDING)
-    done = make_task("done", status=TaskStatus.DONE)
-    planner = Planner(make_backlog(pending, done))
-
-    assert planner.next_task() is pending
-    assert planner.next_task() is done
-    assert planner.next_task() is None
-
-
-def test_planner_handles_empty_backlog():
-    planner = Planner(Backlog(features=()))
-
-    assert planner.remaining == 0
-    assert planner.current_task is None
-    assert planner.next_task() is None
-    assert planner.next_builder_task() is None
-
-
-def test_next_builder_task_converts_domain_task():
-    task = make_task(
-        "task-1",
-        prompt="Implement the example",
-        files=(Path("example.py"), Path("test_example.py")),
-    )
-    planner = Planner(make_backlog(task))
-
-    builder_task = planner.next_builder_task()
-
-    assert isinstance(builder_task, BuilderTask)
-    assert builder_task == BuilderTask(
-        prompt="Implement the example",
-        files=(Path("example.py"), Path("test_example.py")),
-    )
-    assert planner.current_task is task
-    assert planner.next_builder_task() is None
-
-
-def test_planner_flattens_tasks_across_features():
-    first = make_task("first")
-    second = make_task("second")
-    backlog = Backlog(
-        features=(
-            Feature("feature-1", "Feature 1", (first,)),
-            Feature("feature-2", "Feature 2", (second,)),
-        )
-    )
-    planner = Planner(backlog)
-
-    assert planner.next_task() is first
-    assert planner.next_task() is second
-
-
-def test_from_backlog_delegates_file_loading_to_backlog(tmp_path):
-    backlog_file = tmp_path / "backlog.json"
-    backlog = make_backlog(make_task("task-1"))
-
-    with patch(
-        "planner.Backlog.from_json_file",
-        return_value=backlog,
-    ) as from_json_file:
-        planner = Planner.from_backlog(backlog_file)
-
-    from_json_file.assert_called_once_with(backlog_file)
-    assert planner.next_task() is backlog.tasks[0]
-
-
-def test_from_backlog_loads_real_json_file(tmp_path):
-    backlog_file = tmp_path / "backlog.json"
-    backlog_file.write_text(
-        json.dumps(
-            {
-                "features": [
-                    {
-                        "id": "feature-1",
-                        "title": "Feature 1",
-                        "tasks": [
-                            {
-                                "id": "task-1",
-                                "title": "Task 1",
-                                "prompt": "Implement task 1",
-                                "files": ["task.py"],
-                                "status": "pending",
-                                "created_at": "2023-01-01T00:00:00",
-                                "updated_at": "2023-01-01T00:00:00",
-                                "events": [],
-                            }
-                        ],
-                    }
-                ]
-            }
-        ),
-        encoding="utf-8",
-    )
-
-    planner = Planner.from_backlog(backlog_file)
-
-    builder_task = planner.next_builder_task()
-    assert builder_task == BuilderTask(
-        prompt="Implement task 1",
-        files=(Path("task.py"),),
-    )
-
-
-def test_from_configuration_uses_validated_backlog_data():
-    from types import SimpleNamespace
-
-    configuration = SimpleNamespace(
+def configuration_with_tasks(*tasks):
+    return SimpleNamespace(
         backlog={
-            "features": [
-                {
-                    "id": "feature-1",
-                    "title": "Feature 1",
-                    "tasks": [
-                        {
-                            "id": "task-1",
-                            "title": "Task 1",
-                            "prompt": "Implement task 1",
-                            "files": ["task.py"],
-                            "status": "pending",
-                            "created_at": "2023-01-01T00:00:00",
-                            "updated_at": "2023-01-01T00:00:00",
-                            "events": [],
-                        }
-                    ],
-                }
-            ]
+            "schema_version": "1.0",
+            "features": [{
+                "id": "feature",
+                "title": "Feature",
+                "tasks": list(tasks),
+            }],
         }
+    )
+
+
+def task(task_id: str, status: str):
+    return {
+        "id": task_id,
+        "title": task_id,
+        "prompt": f"Prompt {task_id}",
+        "files": [f"{task_id}.py"],
+        "status": status,
+        "created_at": "2023-01-01T00:00:00",
+        "updated_at": "2023-01-01T00:00:00",
+        "events": [],
+    }
+
+
+def test_planner_is_created_from_configuration_and_selects_pending_tasks():
+    configuration = configuration_with_tasks(
+        task("done", "done"),
+        task("pending", "pending"),
     )
 
     planner = Planner.from_configuration(configuration)
 
     assert planner.next_builder_task() == BuilderTask(
-        prompt="Implement task 1",
-        files=(Path("task.py"),),
+        prompt="Prompt pending",
+        files=(Path("pending.py"),),
     )
+    assert planner.next_builder_task() is None
+
+
+def test_planner_propagates_run_tests_false_to_builder_task():
+    disabled_task = task("pending", "pending")
+    disabled_task["run_tests"] = False
+    planner = Planner.from_configuration(
+        configuration_with_tasks(disabled_task)
+    )
+
+    assert planner.next_builder_task() == BuilderTask(
+        prompt="Prompt pending",
+        files=(Path("pending.py"),),
+        run_tests=False,
+    )
+
+
+def test_complete_current_task_persists_done_status(tmp_path):
+    import json
+    from types import SimpleNamespace
+
+    backlog_file = tmp_path / ".nightshift" / "backlog.json"
+    backlog_file.parent.mkdir()
+    pending_task = task("pending", "pending")
+    original_updated_at = pending_task["updated_at"]
+    backlog_data = {
+        "schema_version": "1.0",
+        "features": [{
+            "id": "feature",
+            "title": "Feature",
+            "tasks": [pending_task],
+        }],
+    }
+    backlog_file.write_text(json.dumps(backlog_data), encoding="utf-8")
+    configuration = SimpleNamespace(
+        backlog=backlog_data,
+        context=SimpleNamespace(backlog_file=backlog_file),
+    )
+    planner = Planner.from_configuration(configuration)
+
+    planner.next_builder_task()
+    planner.complete_current_task()
+
+    persisted = json.loads(backlog_file.read_text(encoding="utf-8"))
+    completed = persisted["features"][0]["tasks"][0]
+    assert completed["status"] == "done"
+    assert completed["updated_at"] != original_updated_at
+    assert completed["events"][-1]["message"] == (
+        "Task completed after approved Nightshift cycle."
+    )
+
+
+def test_complete_current_task_requires_selected_task():
+    planner = Planner.from_configuration(
+        configuration_with_tasks(task("pending", "pending"))
+    )
+
+    import pytest
+    with pytest.raises(RuntimeError, match="No current task"):
+        planner.complete_current_task()

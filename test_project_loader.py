@@ -19,6 +19,15 @@ VALID_DOCUMENTS = {
         "entries": [],
     },
     "adr.json": {"schema_version": "1.0", "decisions": []},
+    "prompts.json": {
+        "schema_version": "1.0",
+        "prompts": {
+            "planner": "Plan.",
+            "builder": "Build.",
+            "reviewer": "Review.",
+            "architect": "Design.",
+        },
+    },
 }
 
 
@@ -40,6 +49,7 @@ def test_loads_all_project_documents(tmp_path: Path) -> None:
     assert data.backlog["features"] == []
     assert data.knowledge["scope"] == "project"
     assert data.adr["decisions"] == []
+    assert data.prompts["prompts"]["planner"] == "Plan."
 
 
 def test_reports_missing_project_document(tmp_path: Path) -> None:

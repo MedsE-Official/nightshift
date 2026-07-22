@@ -5,13 +5,18 @@ import subprocess
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Sequence
+from typing import TYPE_CHECKING, Any, Sequence
+
+
+if TYPE_CHECKING:
+    from configuration import Configuration
 
 
 @dataclass(frozen=True)
 class BuilderTask:
     prompt: str
     files: tuple[Path, ...]
+    run_tests: bool = True
 
     @property
     def review_block(self) -> dict[str, object]:
@@ -208,3 +213,34 @@ def run_builder(
         has_changes=has_changes,
         status=status,
     )
+
+
+@dataclass(frozen=True)
+class Builder:
+    """Configuration-aware Builder entry point."""
+
+    configuration: "Configuration"
+
+    @classmethod
+    def from_configuration(cls, configuration: "Configuration") -> "Builder":
+        return cls(configuration=configuration)
+
+    def run(
+        self,
+        *,
+        task: BuilderTask,
+        runtime_config: dict[str, Any],
+    ) -> BuilderResult:
+        guidance = self.configuration.role_context("builder")
+        effective_task = BuilderTask(
+            prompt=f"{guidance}\n\nCURRENT TASK:\n{task.prompt}",
+            files=task.files,
+            run_tests=task.run_tests,
+        )
+        return run_builder(
+            task=effective_task,
+            project_root=self.configuration.context.project_root,
+            timeout_seconds=int(
+                runtime_config.get("timeout_minutes_per_aider_run", 15)
+            ) * 60,
+        )

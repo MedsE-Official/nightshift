@@ -1,11 +1,14 @@
 import os
 from enum import Enum
 from pathlib import Path
-from typing import Dict, Any
+from typing import TYPE_CHECKING, Dict, Any
 from dataclasses import dataclass
 from api_guard import check_public_api, ApiGuardResult
 from builder import BuilderResult, BuilderStatus
 from test_runner import ExecutionResult
+
+if TYPE_CHECKING:
+    from configuration import Configuration
 
 
 class ReviewStatus(Enum):
@@ -151,3 +154,36 @@ def to_summary(review_result: ReviewResult, builder_result: BuilderResult) -> Re
         passed=review_result.passed,
         errors=review_result.errors
     )
+
+
+@dataclass(frozen=True)
+class Reviewer:
+    """Configuration-aware Reviewer entry point."""
+
+    configuration: "Configuration"
+
+    @classmethod
+    def from_configuration(cls, configuration: "Configuration") -> "Reviewer":
+        return cls(configuration=configuration)
+
+    def run(
+        self,
+        *,
+        runtime_config: Dict[str, Any],
+        block: Dict[str, Any],
+        diff: str,
+        builder_result: BuilderResult,
+        test_result: ExecutionResult,
+    ) -> ReviewResult:
+        enriched_block = dict(block)
+        enriched_block["review_guidance"] = self.configuration.role_context(
+            "reviewer"
+        )
+        return run_review(
+            project_root=self.configuration.context.project_root,
+            config=runtime_config,
+            block=enriched_block,
+            diff=diff,
+            builder_result=builder_result,
+            test_result=test_result,
+        )

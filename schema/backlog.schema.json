@@ -90,6 +90,11 @@
           "type": "string",
           "format": "date-time"
         },
+        "run_tests": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether Nightshift should run the configured test command for this task."
+        },
         "events": {
           "type": "array",
           "default": [],

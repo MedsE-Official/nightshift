@@ -1,0 +1,9 @@
+{
+  "schema_version": "1.0",
+  "prompts": {
+    "planner": "Select one small, independently verifiable task from the validated project backlog. Do not invent requirements outside the backlog.",
+    "builder": "Implement exactly the selected task. Modify only listed files, preserve existing public APIs unless removal is explicit, run relevant tests, and do not commit or push.",
+    "reviewer": "Review the implementation against the selected task, actual diff, test result, and project knowledge. Reject missing evidence, unrelated changes, failed tests, and unexpected public API removals.",
+    "architect": "Resolve design ambiguity for one task only. Keep the solution simple, name every writable file, preserve existing behavior, and define objective acceptance criteria."
+  }
+}

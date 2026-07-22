@@ -37,6 +37,10 @@ class ProjectContext:
     def adr_file(self) -> Path:
         return self.nightshift_root / "adr.json"
 
+    @property
+    def prompts_file(self) -> Path:
+        return self.nightshift_root / "prompts.json"
+
     def is_nightshift_project(self) -> bool:
         """Return whether the project contains the conventional control folder."""
 

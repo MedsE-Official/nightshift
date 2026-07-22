@@ -1,6 +1,5 @@
-import json
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
 from typing import Any
@@ -30,6 +29,7 @@ class Task:
     status: TaskStatus
     created_at: datetime
     updated_at: datetime
+    run_tests: bool = True
     events: tuple[TaskEvent, ...] = field(default_factory=tuple)
 
     @property
@@ -65,12 +65,6 @@ class Backlog:
         )
         return cls(features=features)
 
-    @classmethod
-    def from_json_file(cls, path: Path) -> "Backlog":
-        with path.open("r", encoding="utf-8") as file:
-            data = json.load(file)
-
-        return cls.from_dict(data)
 
     @property
     def tasks(self) -> tuple[Task, ...]:
@@ -119,9 +113,15 @@ def _parse_task(data: Any, *, feature_index: int, task_index: int) -> Task:
     if not all(isinstance(file_name, str) for file_name in files_data):
         raise ValueError(f"{context} files must contain only strings")
 
+    run_tests = data.get("run_tests", True)
+    if not isinstance(run_tests, bool):
+        raise ValueError(f"{context} run_tests must be a boolean")
+
     events_data = data.get("events", [])
     if not isinstance(events_data, list):
         raise ValueError(f"{context} events must be an array")
+
+    fallback_timestamp = datetime.now(timezone.utc)
 
     return Task(
         id=_required_string(data, "id", context),
@@ -129,8 +129,17 @@ def _parse_task(data: Any, *, feature_index: int, task_index: int) -> Task:
         prompt=_required_string(data, "prompt", context),
         files=tuple(Path(file_name) for file_name in files_data),
         status=status,
-        created_at=_required_datetime(data, "created_at", context),
-        updated_at=_required_datetime(data, "updated_at", context),
+        created_at=_datetime_or_default(
+            data,
+            "created_at",
+            default=fallback_timestamp,
+        ),
+        updated_at=_datetime_or_default(
+            data,
+            "updated_at",
+            default=fallback_timestamp,
+        ),
+        run_tests=run_tests,
         events=tuple(
             _parse_event(event_data, context=context, event_index=event_index)
             for event_index, event_data in enumerate(events_data)
@@ -157,6 +166,24 @@ def _required_string(data: dict[str, Any], field_name: str, context: str) -> str
         raise ValueError(f"{context} {field_name} must be a string")
     return value
 
+
+
+def _datetime_or_default(
+    data: dict[str, Any],
+    field_name: str,
+    *,
+    default: datetime,
+) -> datetime:
+    """Return an ISO datetime or a supplied fallback for missing/invalid values."""
+    value = data.get(field_name)
+
+    if not isinstance(value, str):
+        return default
+
+    try:
+        return datetime.fromisoformat(value)
+    except ValueError:
+        return default
 
 def _required_datetime(
     data: dict[str, Any], field_name: str, context: str

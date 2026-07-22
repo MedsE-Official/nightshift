@@ -19,6 +19,7 @@ def test_project_context_exposes_conventional_paths(tmp_path):
     assert context.backlog_file == tmp_path / ".nightshift" / "backlog.json"
     assert context.knowledge_file == tmp_path / ".nightshift" / "knowledge.json"
     assert context.adr_file == tmp_path / ".nightshift" / "adr.json"
+    assert context.prompts_file == tmp_path / ".nightshift" / "prompts.json"
 
 
 def test_is_nightshift_project_requires_nightshift_directory(tmp_path):

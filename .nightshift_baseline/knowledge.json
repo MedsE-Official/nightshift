@@ -1,0 +1,13 @@
+
+{
+  "project": [
+    "This is a standalone Python project named calculator.",
+    "Nightshift runs against this repository as an external project_root.",
+    "The Nightshift source repository must never be modified.",
+    "The calculator is text based and runs in a terminal.",
+    "Use pytest for automated tests.",
+    "Do not use eval or exec to evaluate expressions.",
+    "Implement only one backlog task per cycle.",
+    "Do not implement later backlog tasks early."
+  ]
+}
